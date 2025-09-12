@@ -1,11 +1,11 @@
-import { ModelAdapter } from "./base";
-import Anthropic from "@anthropic-ai/sdk";
+import { ModelAdapter } from './base';
+import Anthropic from '@anthropic-ai/sdk';
 
 export class ClaudeAdapter implements ModelAdapter {
-  name = "claude";
+  name = 'claude';
 
   async complete(prompt: string, options?: { apiKey?: string; model?: string | string[] }) {
-  if (!options || !options.apiKey) throw new Error("API key required for Claude");
+    if (!options || !options.apiKey) throw new Error('API key required for Claude');
     const client = new Anthropic({ apiKey: options.apiKey });
     // If multiple models provided, pick the first
     let model: string | undefined;
@@ -17,22 +17,27 @@ export class ClaudeAdapter implements ModelAdapter {
     // Try the Messages API (preferred)
     try {
       const res = await client.messages.create({
-        model: model ? model : "claude-2.1",
-        messages: [{ role: "user", content: prompt }],
+        model: model ? model : 'claude-2.1',
+        messages: [{ role: 'user', content: prompt }],
         max_tokens: 1024,
       });
       // SDK's Message response exposes `content` as the top-level assistant text
       const anyRes = res as any;
-      const content = anyRes && (typeof anyRes.content === 'string' ? anyRes.content : (anyRes.message && typeof anyRes.message === 'string' ? anyRes.message : undefined));
-      if (typeof content === "string")
-        return content;
+      const content =
+        anyRes &&
+        (typeof anyRes.content === 'string'
+          ? anyRes.content
+          : anyRes.message && typeof anyRes.message === 'string'
+          ? anyRes.message
+          : undefined);
+      if (typeof content === 'string') return content;
       // fallback to stringify whole response
       return JSON.stringify(res);
     } catch (err) {
       // Fallback to the legacy completions API if available
       try {
         const res = await client.completions.create({
-          model: model ? model : "claude-2.1",
+          model: model ? model : 'claude-2.1',
           prompt,
           max_tokens_to_sample: 1024,
         } as any);
