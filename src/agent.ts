@@ -35,24 +35,11 @@ export class Agent {
     return this.prompt;
   }
 
-  async act(toolName: string, params: any): Promise<string> {
-    const tool = this.tools.find(t => t.name === toolName);
-    if (tool) {
-      // Validate params against tool.paramsSchema using ajv
-      const validate = this.ajv.compile(tool.paramsSchema);
-      const valid = validate(params);
-      if (!valid) {
-        return `Invalid parameters for tool '${toolName}': ${this.ajv.errorsText(validate.errors)}`;
-      }
-      const result = await tool.action(params);
-      this.remember(`Tool '${tool.name}' used with params: ${JSON.stringify(params)}`);
-      this.remember(`Result: ${result}`);
-      return result;
-    }
-    return `Tool '${toolName}' not found.`;
-  }
-
-  async decideAndAct(apiKey: string, model: ModelAdapter, modelOverride?: string): Promise<string> {
+  async decide(
+    apiKey: string,
+    model: ModelAdapter,
+    modelOverride?: string
+  ): Promise<Array<{ toolName: string; params: any }> | string> {
     // Format prompt for Claude with memory and tool descriptions
     const toolDescriptions = this.tools
       .map(
@@ -77,9 +64,26 @@ export class Agent {
     } catch {
       return 'Failed to parse tool calls from Claude response. Expected a JSON array.';
     }
+    return toolCalls;
+  }
+
+  private async _runTool(toolName: string, params: any): Promise<string> {
+    const tool = this.tools.find(t => t.name === toolName);
+    if (!tool) {
+      return `Tool '${toolName}' not found.`;
+    }
+    // Validate params
+    const validate = this.ajv.compile(tool.paramsSchema);
+    if (!validate(params)) {
+      return `Invalid params for tool '${toolName}': ${JSON.stringify(validate.errors)}`;
+    }
+    return await tool.action(params);
+  }
+
+  async act(toolCalls: Array<{ toolName: string; params: any }>): Promise<string> {
     const results: string[] = [];
     for (const call of toolCalls) {
-      const result = await this.act(call.toolName, call.params);
+      const result = await this._runTool(call.toolName, call.params);
       results.push(`Tool: ${call.toolName}, Result: ${result}`);
     }
     return results.join('\n');
