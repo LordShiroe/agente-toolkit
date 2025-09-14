@@ -35,6 +35,20 @@ export class Agent {
     return this.prompt;
   }
 
+  async run(
+    message: string,
+    apiKey: string,
+    model: ModelAdapter,
+    modelOverride?: string
+  ): Promise<string> {
+    this.remember(message);
+    const toolCalls = await this.decide(apiKey, model, modelOverride);
+    if (typeof toolCalls === 'string') {
+      return toolCalls; // error message from decide
+    }
+    return await this.act(toolCalls);
+  }
+
   async decide(
     apiKey: string,
     model: ModelAdapter,
