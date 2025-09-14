@@ -21,13 +21,15 @@ async function main() {
   agent.remember('User asked to add 5 and 3');
 
   // For testing, call act directly
-  const result = await agent.act('add', { a: 5, b: 3 });
+  const result = await agent.act([{ toolName: 'add', params: { a: 5, b: 3 } }]);
   console.log('Result:', result);
   console.log('Memory:', agent.getMemory());
 
   // To test full flow with Claude, uncomment and provide API key
+  // const { ClaudeAdapter } = await import('./adapters/claudeAdapter');
   // const apiKey = process.argv[2] || 'your-api-key-here';
-  // const fullResult = await agent.decideAndAct(apiKey);
+  // const adapter = new ClaudeAdapter(apiKey);
+  // const fullResult = await agent.decideAndAct(adapter);
   // console.log('Full result:', fullResult);
 }
 

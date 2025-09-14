@@ -4,12 +4,17 @@ import Anthropic from '@anthropic-ai/sdk';
 export class ClaudeAdapter implements ModelAdapter {
   name = 'claude';
   private defaultModel = 'claude-sonnet-4-20250514';
+  private apiKey: string;
 
-  async complete(prompt: string, options?: { apiKey?: string; model?: string }): Promise<string> {
-    if (!options?.apiKey) {
-      throw new Error('API key required for Claude');
+  constructor(apiKey: string) {
+    if (!apiKey) {
+      throw new Error('API key is required for ClaudeAdapter');
     }
-    const client = new Anthropic({ apiKey: options.apiKey });
+    this.apiKey = apiKey;
+  }
+
+  async complete(prompt: string, options?: { model?: string }): Promise<string> {
+    const client = new Anthropic({ apiKey: this.apiKey });
     const modelToUse = options?.model || this.defaultModel;
 
     try {

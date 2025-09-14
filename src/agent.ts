@@ -35,14 +35,9 @@ export class Agent {
     return this.prompt;
   }
 
-  async run(
-    message: string,
-    apiKey: string,
-    model: ModelAdapter,
-    modelOverride?: string
-  ): Promise<string> {
+  async run(message: string, model: ModelAdapter, modelOverride?: string): Promise<string> {
     this.remember(message);
-    const toolCalls = await this.decide(apiKey, model, modelOverride);
+    const toolCalls = await this.decide(model, modelOverride);
     if (typeof toolCalls === 'string') {
       return toolCalls; // error message from decide
     }
@@ -50,7 +45,6 @@ export class Agent {
   }
 
   async decide(
-    apiKey: string,
     model: ModelAdapter,
     modelOverride?: string
   ): Promise<Array<{ toolName: string; params: any }> | string> {
@@ -67,7 +61,7 @@ export class Agent {
       '\n'
     )}\n\nAvailable Tools:\n${toolDescriptions}\n\nPlease respond with a JSON array of tool calls in the format: [{ "toolName": "name", "params": {...} }]`;
     const fullPrompt = `${this.prompt}\n\nHuman: ${userMessage}\n\nAssistant:`;
-    const response = await model.complete(fullPrompt, { apiKey, model: modelOverride });
+    const response = await model.complete(fullPrompt, { model: modelOverride });
 
     console.log('Claude Response:', response);
     // Expecting response as a JSON array: [{ toolName: string, params: object }]
@@ -101,5 +95,13 @@ export class Agent {
       results.push(`Tool: ${call.toolName}, Result: ${result}`);
     }
     return results.join('\n');
+  }
+
+  async decideAndAct(model: ModelAdapter, modelOverride?: string): Promise<string> {
+    const toolCalls = await this.decide(model, modelOverride);
+    if (typeof toolCalls === 'string') {
+      return toolCalls; // error message from decide
+    }
+    return await this.act(toolCalls);
   }
 }

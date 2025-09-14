@@ -45,13 +45,13 @@ program
       let adapter;
       if (options.provider === 'claude') {
         const { ClaudeAdapter } = await import('./adapters/claudeAdapter');
-        adapter = new ClaudeAdapter();
+        adapter = new ClaudeAdapter(options.apiKey);
       } else {
         console.error('Provider not supported in this demo. Use --provider claude');
         process.exit(1);
       }
       // Use the agent system to decide and act
-      const result = await agent.decideAndAct(options.apiKey, adapter, options.model);
+      const result = await agent.decideAndAct(adapter, options.model);
       console.log('Agent Result:', result);
       console.log('Memory:', agent.getMemory());
     } catch (error) {
