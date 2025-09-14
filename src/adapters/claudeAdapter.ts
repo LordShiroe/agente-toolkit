@@ -5,21 +5,22 @@ export class ClaudeAdapter implements ModelAdapter {
   name = 'claude';
   private defaultModel = 'claude-sonnet-4-20250514';
   private apiKey: string;
+  private model: string;
 
-  constructor(apiKey: string) {
+  constructor(apiKey: string, model?: string) {
     if (!apiKey) {
       throw new Error('API key is required for ClaudeAdapter');
     }
     this.apiKey = apiKey;
+    this.model = model || this.defaultModel;
   }
 
-  async complete(prompt: string, options?: { model?: string }): Promise<string> {
+  async complete(prompt: string): Promise<string> {
     const client = new Anthropic({ apiKey: this.apiKey });
-    const modelToUse = options?.model || this.defaultModel;
 
     try {
       const response = await client.messages.create({
-        model: modelToUse,
+        model: this.model,
         messages: [{ role: 'user', content: prompt }],
         max_tokens: 1024,
       });

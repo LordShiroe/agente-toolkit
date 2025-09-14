@@ -35,19 +35,16 @@ export class Agent {
     return this.prompt;
   }
 
-  async run(message: string, model: ModelAdapter, modelOverride?: string): Promise<string> {
+  async run(message: string, model: ModelAdapter): Promise<string> {
     this.remember(message);
-    const toolCalls = await this.decide(model, modelOverride);
+    const toolCalls = await this.decide(model);
     if (typeof toolCalls === 'string') {
       return toolCalls; // error message from decide
     }
     return await this.act(toolCalls);
   }
 
-  async decide(
-    model: ModelAdapter,
-    modelOverride?: string
-  ): Promise<Array<{ toolName: string; params: any }> | string> {
+  async decide(model: ModelAdapter): Promise<Array<{ toolName: string; params: any }> | string> {
     // Format prompt for Claude with memory and tool descriptions
     const toolDescriptions = this.tools
       .map(
@@ -61,7 +58,7 @@ export class Agent {
       '\n'
     )}\n\nAvailable Tools:\n${toolDescriptions}\n\nPlease respond with a JSON array of tool calls in the format: [{ "toolName": "name", "params": {...} }]`;
     const fullPrompt = `${this.prompt}\n\nHuman: ${userMessage}\n\nAssistant:`;
-    const response = await model.complete(fullPrompt, { model: modelOverride });
+    const response = await model.complete(fullPrompt);
 
     console.log('Claude Response:', response);
     // Expecting response as a JSON array: [{ toolName: string, params: object }]
@@ -97,8 +94,8 @@ export class Agent {
     return results.join('\n');
   }
 
-  async decideAndAct(model: ModelAdapter, modelOverride?: string): Promise<string> {
-    const toolCalls = await this.decide(model, modelOverride);
+  async decideAndAct(model: ModelAdapter): Promise<string> {
+    const toolCalls = await this.decide(model);
     if (typeof toolCalls === 'string') {
       return toolCalls; // error message from decide
     }
