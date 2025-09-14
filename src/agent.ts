@@ -1,6 +1,6 @@
 import { ModelAdapter } from './adapters/base';
 import Ajv from 'ajv';
-import { Type, Static, TSchema } from '@sinclair/typebox';
+import { TSchema } from '@sinclair/typebox';
 
 export interface Tool<TParams = any> {
   name: string;
@@ -52,7 +52,7 @@ export class Agent {
     return `Tool '${toolName}' not found.`;
   }
 
-  async decideAndAct(apiKey: string, modelOrAdapter?: ModelAdapter): Promise<string> {
+  async decideAndAct(apiKey: string, model: ModelAdapter, modelOverride?: string): Promise<string> {
     // Format prompt for Claude with memory and tool descriptions
     const toolDescriptions = this.tools
       .map(
@@ -66,9 +66,7 @@ export class Agent {
       '\n'
     )}\n\nAvailable Tools:\n${toolDescriptions}\n\nPlease respond with a JSON array of tool calls in the format: [{ "toolName": "name", "params": {...} }]`;
     const fullPrompt = `${this.prompt}\n\nHuman: ${userMessage}\n\nAssistant:`;
-    // If a ModelAdapter was passed in, use it
-    const adapter = modelOrAdapter as ModelAdapter;
-    const response = await adapter.complete(fullPrompt, { apiKey });
+    const response = await model.complete(fullPrompt, { apiKey, model: modelOverride });
 
     console.log('Claude Response:', response);
     // Expecting response as a JSON array: [{ toolName: string, params: object }]

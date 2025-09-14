@@ -13,8 +13,8 @@ program
   .description('Run the agent with a prompt')
   .option('-k, --api-key <key>', 'Anthropic API key')
   .option('-p, --prompt <prompt>', 'Prompt for the agent', 'You are a helpful assistant.')
-  .option('-m, --model <model>', 'Preferred model or comma-separated list of models')
   .option('-r, --provider <provider>', 'Model provider to use (claude|openai|ollama)', 'claude')
+  .option('-m, --model <model>', 'Preferred model to override adapter default')
   .action(async options => {
     if (!options.apiKey) {
       console.error('API key is required. Use -k or --api-key');
@@ -42,7 +42,6 @@ program
     agent.remember('User wants to add 5 and 3');
 
     try {
-      const modelArg = options.model ? options.model.split(',') : undefined;
       let adapter;
       if (options.provider === 'claude') {
         const { ClaudeAdapter } = await import('./adapters/claudeAdapter');
@@ -51,15 +50,9 @@ program
         console.error('Provider not supported in this demo. Use --provider claude');
         process.exit(1);
       }
-      // Use adapter to run completion directly
-      const providerResult = await adapter.complete(
-        `${options.prompt}\nMemory: ${agent.getMemory().join('\n')}`,
-        {
-          apiKey: options.apiKey,
-          model: modelArg,
-        }
-      );
-      console.log('Provider Result:', providerResult);
+      // Use the agent system to decide and act
+      const result = await agent.decideAndAct(options.apiKey, adapter, options.model);
+      console.log('Agent Result:', result);
       console.log('Memory:', agent.getMemory());
     } catch (error) {
       console.error('Error:', error instanceof Error ? error.message : String(error));
