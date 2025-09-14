@@ -1,10 +1,11 @@
 import { Agent, Tool } from '../agent';
 import { ModelAdapter } from '../adapters/base';
+import { MemoryManager } from '../memory';
 import { Type } from '@sinclair/typebox';
 
 export class CalculatorAgent extends Agent {
-  constructor() {
-    super();
+  constructor(memoryManager?: MemoryManager) {
+    super(memoryManager);
     this.setupCalculatorTools();
     this.setPrompt(
       `You are a helpful calculator assistant. When users ask for arithmetic operations, use the available tools to compute the result and provide a clear answer.`

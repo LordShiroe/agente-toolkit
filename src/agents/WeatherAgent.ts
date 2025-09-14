@@ -1,11 +1,12 @@
 import fetch from 'node-fetch';
 import { Agent, Tool } from '../agent';
 import { ModelAdapter } from '../adapters/base';
+import { MemoryManager } from '../memory';
 import { Type } from '@sinclair/typebox';
 
 export class WeatherAgent extends Agent {
-  constructor() {
-    super();
+  constructor(memoryManager?: MemoryManager) {
+    super(memoryManager);
     this.setupWeatherTools();
     this.setPrompt(
       `You are a helpful weather assistant. When users ask about weather, use the available tools to get current weather information for locations. Always be helpful and provide clear weather reports.`

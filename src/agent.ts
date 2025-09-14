@@ -80,7 +80,7 @@ export class Agent {
       )
       .join('\n\n');
 
-    const userMessage = `Context from memory:\n${memoryContext}\n\nAvailable Tools:\n${toolDescriptions}\n\nCurrent request: ${currentMessage}\n\nPlease respond with a JSON array of tool calls in the format: [{ "toolName": "name", "params": {...} }]`;
+    const userMessage = `Context from memory:\n${memoryContext}\n\nAvailable Tools:\n${toolDescriptions}\n\nCurrent request: ${currentMessage}\n\nPlease respond ONLY with a JSON array of tool calls in the format: [{ "toolName": "name", "params": {...} }]`;
     const fullPrompt = `${this.prompt}\n\nHuman: ${userMessage}\n\nAssistant:`;
     const response = await model.complete(fullPrompt);
 
@@ -88,10 +88,13 @@ export class Agent {
     // Expecting response as a JSON array: [{ toolName: string, params: object }]
     let toolCalls: Array<{ toolName: string; params: any }> = [];
     try {
-      toolCalls = JSON.parse(response);
+      toolCalls = JSON.parse(response.trim());
       if (!Array.isArray(toolCalls)) throw new Error();
     } catch {
-      return 'Failed to parse tool calls from LLM response. Expected a JSON array.';
+      return (
+        'Failed to parse tool calls from LLM response. Expected a JSON array got: ' +
+        JSON.stringify(toolCalls)
+      );
     }
     return toolCalls;
   }
