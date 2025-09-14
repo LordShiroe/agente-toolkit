@@ -39,7 +39,6 @@ program
 
     agent.addTool(addTool);
     agent.setPrompt(options.prompt);
-    agent.remember('User wants to add 5 and 3');
 
     try {
       let adapter;
@@ -51,7 +50,7 @@ program
         process.exit(1);
       }
       // Use the agent system to decide and act
-      const result = await agent.decideAndAct(adapter);
+      const result = await agent.run('I want to add 5 and 3', adapter);
       console.log('Agent Result:', result);
       console.log('Memory:', agent.getMemory());
     } catch (error) {

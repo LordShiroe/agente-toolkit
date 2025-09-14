@@ -37,11 +37,7 @@ export class Agent {
 
   async run(message: string, model: ModelAdapter): Promise<string> {
     this.remember(message);
-    const toolCalls = await this.decide(model);
-    if (typeof toolCalls === 'string') {
-      return toolCalls; // error message from decide
-    }
-    return await this.act(toolCalls);
+    return this._executeDecisionCycle(model);
   }
 
   async decide(model: ModelAdapter): Promise<Array<{ toolName: string; params: any }> | string> {
@@ -94,7 +90,7 @@ export class Agent {
     return results.join('\n');
   }
 
-  async decideAndAct(model: ModelAdapter): Promise<string> {
+  private async _executeDecisionCycle(model: ModelAdapter): Promise<string> {
     const toolCalls = await this.decide(model);
     if (typeof toolCalls === 'string') {
       return toolCalls; // error message from decide
