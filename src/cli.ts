@@ -7,6 +7,7 @@ import { ModelAdapter } from './adapters/base';
 import { SlidingWindowMemoryManager } from './memory';
 import { CalculatorAgent } from './agents/CalculatorAgent';
 import { WeatherAgent } from './agents/WeatherAgent';
+import { initializeLogger, getLogger } from './logger';
 
 const program = new Command();
 
@@ -75,10 +76,24 @@ program
   .option('-r, --provider <provider>', 'Model provider to use (claude|openai|ollama)', 'claude')
   .option('-m, --model <model>', 'Preferred model to override adapter default')
   .option('--memory-size <size>', 'Maximum number of memories to keep', '30')
+  .option('-v, --verbose', 'Enable verbose logging for debugging')
   .action(async options => {
+    // Initialize logger based on verbose option
+    initializeLogger({
+      level: options.verbose ? 'debug' : 'info',
+      verbose: options.verbose || false,
+      enableFileLogging: options.verbose,
+    });
+
+    const logger = getLogger();
+
     if (!options.apiKey) {
       console.error('❌ API key is required. Use -k or --api-key');
       process.exit(1);
+    }
+
+    if (options.verbose) {
+      logger.info('Verbose mode enabled - detailed logging will be shown');
     }
 
     // Display agent menu and get user selection
@@ -92,6 +107,8 @@ program
     // Instantiate the selected agent
     const AgentClass = AVAILABLE_AGENTS[selectedAgentType].class;
     const agent = new AgentClass(memoryManager);
+
+    logger.logAgentStart(AVAILABLE_AGENTS[selectedAgentType].name);
 
     try {
       let adapter: ModelAdapter;
@@ -116,6 +133,7 @@ program
       const askQuestion = () => {
         rl.question('You: ', async (input: string) => {
           if (input.toLowerCase() === 'exit') {
+            logger.logAgentEnd();
             console.log('Goodbye! 👋');
             rl.close();
             return;

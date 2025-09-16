@@ -1,5 +1,7 @@
 import { ModelAdapter } from './adapters/base';
 import { MemoryManager, SlidingWindowMemoryManager, Memory } from './memory';
+import { Planner } from './planner';
+import { getLogger } from './logger';
 import Ajv from 'ajv';
 import { TSchema } from '@sinclair/typebox';
 
@@ -15,6 +17,8 @@ export class Agent {
   private tools: Tool[] = [];
   private prompt: string = '';
   private ajv = new Ajv();
+  private planner = new Planner();
+  private logger = getLogger();
 
   constructor(memoryManager?: MemoryManager) {
     this.memoryManager = memoryManager || new SlidingWindowMemoryManager();
@@ -30,6 +34,7 @@ export class Agent {
       content: message,
       importance,
     });
+    this.logger.logMemoryOperation('add', { type, importance, contentLength: message.length });
   }
 
   getMemory(): Memory[] {
@@ -53,90 +58,53 @@ export class Agent {
   }
 
   async run(message: string, model: ModelAdapter): Promise<string> {
+    this.logger.info('Starting agent execution', { message: message.substring(0, 50) + '...' });
     this.remember(message, 'conversation', 0.8);
     const response = await this._executeDecisionCycle(message, model);
     this.remember(`Agent response: ${response}`, 'conversation', 0.6);
+    this.logger.info('Agent execution completed');
     return response;
   }
 
-  async decide(
-    currentMessage: string,
-    model: ModelAdapter
-  ): Promise<Array<{ toolName: string; params: any }> | string> {
-    // Get relevant memories for context instead of dumping all memories
-    const relevantMemories = this.memoryManager.getRelevantMemories(currentMessage, 5);
-    const memoryContext =
-      relevantMemories.length > 0
-        ? relevantMemories.map(m => `[${m.type}] ${m.content}`).join('\n')
-        : 'No relevant context available.';
-
-    // Format tool descriptions
-    const toolDescriptions = this.tools
-      .map(
-        t =>
-          `Tool: ${t.name}\nDescription: ${t.description}\nParams: ${JSON.stringify(
-            t.paramsSchema
-          )}`
-      )
-      .join('\n\n');
-
-    const userMessage = `Context from memory:\n${memoryContext}\n\nAvailable Tools:\n${toolDescriptions}\n\nCurrent request: ${currentMessage}\n\nPlease respond ONLY with a JSON array of tool calls in the format: [{ "toolName": "name", "params": {...} }]`;
-    const fullPrompt = `${this.prompt}\n\nHuman: ${userMessage}\n\nAssistant:`;
-    const response = await model.complete(fullPrompt);
-
-    console.log('LLM Response:', response);
-    // Expecting response as a JSON array: [{ toolName: string, params: object }]
-    let toolCalls: Array<{ toolName: string; params: any }> = [];
-    try {
-      toolCalls = JSON.parse(response.trim());
-      if (!Array.isArray(toolCalls)) throw new Error();
-    } catch {
-      return (
-        'Failed to parse tool calls from LLM response. Expected a JSON array got: ' +
-        JSON.stringify(toolCalls)
-      );
-    }
-    return toolCalls;
-  }
-
-  private async _runTool(toolName: string, params: any): Promise<string> {
-    const tool = this.tools.find(t => t.name === toolName);
-    if (!tool) {
-      return `Tool '${toolName}' not found.`;
-    }
-    // Validate params
-    const validate = this.ajv.compile(tool.paramsSchema);
-    if (!validate(params)) {
-      return `Invalid params for tool '${toolName}': ${JSON.stringify(validate.errors)}`;
-    }
-    return await tool.action(params);
-  }
-
-  async act(toolCalls: Array<{ toolName: string; params: any }>): Promise<string> {
-    if (toolCalls.length === 0) {
-      return 'No tools to execute.';
-    }
-
-    const results: string[] = [];
-    for (const call of toolCalls) {
-      const result = await this._runTool(call.toolName, call.params);
-      results.push(`Tool: ${call.toolName}, Result: ${result}`);
-
-      // Remember individual tool results for better context
-      this.remember(
-        `Used tool "${call.toolName}" with params ${JSON.stringify(call.params)}: ${result}`,
-        'tool_result',
-        0.6
-      );
-    }
-    return results.join('\n');
-  }
-
   private async _executeDecisionCycle(message: string, model: ModelAdapter): Promise<string> {
-    const toolCalls = await this.decide(message, model);
-    if (typeof toolCalls === 'string') {
-      return toolCalls; // error message from decide
+    try {
+      const relevantMemories = this.memoryManager.getRelevantMemories(message, 5);
+      const memoryContext =
+        relevantMemories.length > 0
+          ? relevantMemories.map(m => `[${m.type}] ${m.content}`).join('\n')
+          : 'No relevant context available.';
+
+      this.logger.debug('Retrieved relevant memories', {
+        count: relevantMemories.length,
+        contextLength: memoryContext.length,
+      });
+
+      const plan = await this.planner.createPlan(
+        message,
+        this.tools,
+        memoryContext,
+        this.prompt,
+        model
+      );
+
+      this.logger.logPlanCreation(message, this.tools, plan);
+
+      const result = await this.planner.executePlan(plan, this.tools);
+
+      // Remember the execution steps
+      plan.steps.forEach(step => {
+        this.remember(`Executed ${step.toolName}: ${step.result}`, 'tool_result', 0.6);
+      });
+
+      return result;
+    } catch (error) {
+      const errorMessage = `Planning or execution failed: ${
+        error instanceof Error ? error.message : String(error)
+      }`;
+      this.logger.error('Agent execution failed', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      return errorMessage;
     }
-    return await this.act(toolCalls);
   }
 }
