@@ -21,6 +21,7 @@ export class CalculatorAgent extends Agent {
         a: Type.Number({ description: 'First number' }),
         b: Type.Number({ description: 'Second number' }),
       }),
+      resultSchema: Type.Number({ description: 'The sum of the two numbers' }),
       action: async ({ a, b }: { a: number; b: number }) => (a + b).toString(),
     });
 
@@ -32,6 +33,7 @@ export class CalculatorAgent extends Agent {
         a: Type.Number({ description: 'First number' }),
         b: Type.Number({ description: 'Second number' }),
       }),
+      resultSchema: Type.Number({ description: 'The difference of the two numbers' }),
       action: async ({ a, b }: { a: number; b: number }) => (a - b).toString(),
     });
 
@@ -43,6 +45,7 @@ export class CalculatorAgent extends Agent {
         a: Type.Number({ description: 'First number' }),
         b: Type.Number({ description: 'Second number' }),
       }),
+      resultSchema: Type.Number({ description: 'The product of the two numbers' }),
       action: async ({ a, b }: { a: number; b: number }) => (a * b).toString(),
     });
 
@@ -54,6 +57,10 @@ export class CalculatorAgent extends Agent {
         a: Type.Number({ description: 'Numerator' }),
         b: Type.Number({ description: 'Denominator' }),
       }),
+      resultSchema: Type.Union([
+        Type.Number({ description: 'The quotient of the two numbers' }),
+        Type.String({ description: 'Error message if division by zero' }),
+      ]),
       action: async ({ a, b }: { a: number; b: number }) => {
         if (b === 0) return 'Error: Division by zero';
         return (a / b).toString();

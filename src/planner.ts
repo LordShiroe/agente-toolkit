@@ -1,6 +1,7 @@
 import { ModelAdapter } from './adapters/base';
 import { Tool } from './agent';
 import { getLogger } from './logger';
+import { ReferenceResolver } from './referenceResolver';
 import Ajv from 'ajv';
 import { TSchema } from '@sinclair/typebox';
 
@@ -21,6 +22,7 @@ export interface ExecutionPlan {
 export class Planner {
   private ajv = new Ajv();
   private logger = getLogger();
+  private referenceResolver = new ReferenceResolver();
 
   async createPlan(
     message: string,
@@ -105,7 +107,11 @@ Use {{stepId}} in params to reference previous step results.`;
             throw new Error(`Tool '${step.toolName}' not found`);
           }
 
-          const processedParams = this._resolveReferences(step.params, plan, tool.paramsSchema);
+          const processedParams = this.referenceResolver.resolveReferences(
+            step.params,
+            plan.context,
+            tool.paramsSchema
+          );
           this.logger.logParameterResolution(step.id, step.params, processedParams);
 
           // Validate params
@@ -118,6 +124,12 @@ Use {{stepId}} in params to reference previous step results.`;
           }
 
           step.result = await tool.action(processedParams);
+
+          // Validate result against resultSchema if provided
+          if (tool.resultSchema) {
+            this._validateToolResult(step.result, tool.resultSchema, tool.name);
+          }
+
           step.status = 'completed';
           plan.context[step.id] = step.result;
 
@@ -136,98 +148,21 @@ Use {{stepId}} in params to reference previous step results.`;
     return results.join('\n');
   }
 
-  private _resolveReferences(params: any, plan: ExecutionPlan, schema?: TSchema): any {
-    if (typeof params === 'string') {
-      // Check if the entire string is a template reference (e.g., "{{step1.latitude}}")
-      const singleRefMatch = params.match(/^\{\{(\w+)(?:\.(\w+))?\}\}$/);
-      if (singleRefMatch) {
-        const [, stepId, property] = singleRefMatch;
-        const stepResult = plan.context[stepId];
-        if (stepResult === undefined) return '';
+  private _validateToolResult(result: string, resultSchema: TSchema, toolName: string): void {
+    try {
+      // Try to parse the result as JSON to validate against schema
+      const parsedResult = JSON.parse(result);
+      const validate = this.ajv.compile(resultSchema);
 
-        if (property) {
-          // Handle property access like {{step1.latitude}} - preserve original type
-          try {
-            const parsed = typeof stepResult === 'string' ? JSON.parse(stepResult) : stepResult;
-            const value = parsed[property] !== undefined ? parsed[property] : '';
-            return this._coerceType(value, schema);
-          } catch {
-            return '';
-          }
-        } else {
-          // Handle full step result like {{step1}} - preserve original type
-          return this._coerceType(stepResult, schema);
-        }
+      if (!validate(parsedResult)) {
+        this.logger.warn(`Tool '${toolName}' result does not match expected schema`, {
+          errors: validate.errors,
+          result: parsedResult,
+        });
       }
-
-      // Handle string interpolation (mixed content)
-      return params.replace(/\{\{(\w+)(?:\.(\w+))?\}\}/g, (_, stepId, property) => {
-        const stepResult = plan.context[stepId];
-        if (stepResult === undefined) return '';
-
-        if (property) {
-          try {
-            const parsed = typeof stepResult === 'string' ? JSON.parse(stepResult) : stepResult;
-            return parsed[property] !== undefined ? String(parsed[property]) : '';
-          } catch {
-            return '';
-          }
-        } else {
-          return String(stepResult);
-        }
-      });
-    }
-
-    if (Array.isArray(params)) {
-      const arraySchema = schema?.type === 'array' ? schema.items : undefined;
-      return params.map(item => this._resolveReferences(item, plan, arraySchema));
-    }
-
-    if (params && typeof params === 'object') {
-      const result: Record<string, any> = {};
-      for (const [key, value] of Object.entries(params)) {
-        const propertySchema = schema?.type === 'object' ? schema.properties?.[key] : undefined;
-        result[key] = this._resolveReferences(value, plan, propertySchema);
-      }
-      return result;
-    }
-
-    return this._coerceType(params, schema);
-  }
-
-  private _coerceType(value: any, schema?: TSchema): any {
-    if (!schema || value === undefined || value === null) {
-      return value;
-    }
-
-    const targetType = schema.type;
-
-    switch (targetType) {
-      case 'number':
-        if (typeof value === 'string') {
-          const num = Number(value);
-          return isNaN(num) ? value : num;
-        }
-        return typeof value === 'number' ? value : value;
-
-      case 'integer':
-        if (typeof value === 'string') {
-          const num = parseInt(value, 10);
-          return isNaN(num) ? value : num;
-        }
-        return typeof value === 'number' ? Math.floor(value) : value;
-
-      case 'boolean':
-        if (typeof value === 'string') {
-          return value.toLowerCase() === 'true';
-        }
-        return Boolean(value);
-
-      case 'string':
-        return String(value);
-
-      default:
-        return value;
+    } catch (error) {
+      // If result is not JSON, that's fine - just log it
+      this.logger.debug(`Tool '${toolName}' returned non-JSON result: ${result}`);
     }
   }
 }
