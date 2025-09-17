@@ -15,13 +15,22 @@ export class WeatherAgent extends Agent {
 
   private setupWeatherTools() {
     // Tool to geocode a location name to coordinates
-    const geocodeTool: Tool = {
+    const geocodeSchema = Type.Object({
+      location: Type.String({ description: 'The location name to geocode' }),
+    });
+
+    const geocodeTool: Tool<
+      typeof geocodeSchema,
+      {
+        latitude: number;
+        longitude: number;
+        display_name: string;
+      }
+    > = {
       name: 'geocode_location',
       description: 'Convert a location name to latitude and longitude coordinates',
-      paramsSchema: Type.Object({
-        location: Type.String({ description: 'The location name to geocode' }),
-      }),
-      action: async (params: { location: string }) => {
+      paramsSchema: geocodeSchema,
+      action: async params => {
         try {
           const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
             params.location
@@ -32,56 +41,66 @@ export class WeatherAgent extends Agent {
             },
           });
           if (!response.ok) {
-            return 'Failed to geocode location';
+            throw new Error('Failed to geocode location');
           }
           const data = await response.json();
           if (data.length === 0) {
-            return `Could not find coordinates for location: ${params.location}`;
+            throw new Error(`Could not find coordinates for location: ${params.location}`);
           }
-          const result = {
+
+          return {
             latitude: parseFloat(data[0].lat),
             longitude: parseFloat(data[0].lon),
-            display_name: data[0].display_name,
+            display_name: String(data[0].display_name),
           };
-          return JSON.stringify(result);
         } catch (error) {
-          return `Error geocoding location: ${
-            error instanceof Error ? error.message : String(error)
-          }`;
+          throw new Error(
+            `Error geocoding location: ${error instanceof Error ? error.message : String(error)}`
+          );
         }
       },
     };
 
     // Tool to get weather data for specific coordinates
-    const getWeatherTool: Tool = {
+    const weatherSchema = Type.Object({
+      latitude: Type.Number({ description: 'Latitude coordinate' }),
+      longitude: Type.Number({ description: 'Longitude coordinate' }),
+    });
+
+    const getWeatherTool: Tool<
+      typeof weatherSchema,
+      {
+        temperature: number;
+        windspeed: number;
+        weathercode: number;
+        time: string;
+      }
+    > = {
       name: 'get_weather',
       description: 'Get current weather data for latitude and longitude coordinates',
-      paramsSchema: Type.Object({
-        latitude: Type.Number({ description: 'Latitude coordinate' }),
-        longitude: Type.Number({ description: 'Longitude coordinate' }),
-      }),
-      action: async (params: { latitude: number; longitude: number }) => {
+      paramsSchema: weatherSchema,
+      action: async params => {
         try {
           const url = `https://api.open-meteo.com/v1/forecast?latitude=${params.latitude}&longitude=${params.longitude}&current_weather=true`;
           const response = await fetch(url);
           if (!response.ok) {
-            return 'Failed to fetch weather data';
+            throw new Error('Failed to fetch weather data');
           }
           const data = await response.json();
           const weather = data.current_weather;
           if (!weather) {
-            return 'No weather data available';
+            throw new Error('No weather data available');
           }
-          return JSON.stringify({
+          return {
             temperature: weather.temperature,
             windspeed: weather.windspeed,
             weathercode: weather.weathercode,
             time: weather.time,
-          });
+          };
         } catch (error) {
-          return `Error fetching weather: ${
-            error instanceof Error ? error.message : String(error)
-          }`;
+          throw new Error(
+            `Error fetching weather: ${error instanceof Error ? error.message : String(error)}`
+          );
         }
       },
     };

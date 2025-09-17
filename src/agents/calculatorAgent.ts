@@ -12,37 +12,33 @@ export class CalculatorAgent extends Agent {
   }
 
   private setupCalculatorTools() {
+    const twoNumberSchema = Type.Object({
+      a: Type.Number({ description: 'First number' }),
+      b: Type.Number({ description: 'Second number' }),
+    });
+
     // Addition
     this.addTool({
       name: 'add',
       description: 'Add two numbers',
-      paramsSchema: Type.Object({
-        a: Type.Number({ description: 'First number' }),
-        b: Type.Number({ description: 'Second number' }),
-      }),
-      action: async ({ a, b }: { a: number; b: number }) => (a + b).toString(),
+      paramsSchema: twoNumberSchema,
+      action: async params => (params.a + params.b).toString(),
     });
 
     // Subtraction
     this.addTool({
       name: 'subtract',
       description: 'Subtract two numbers',
-      paramsSchema: Type.Object({
-        a: Type.Number({ description: 'First number' }),
-        b: Type.Number({ description: 'Second number' }),
-      }),
-      action: async ({ a, b }: { a: number; b: number }) => (a - b).toString(),
+      paramsSchema: twoNumberSchema,
+      action: async params => (params.a - params.b).toString(),
     });
 
     // Multiplication
     this.addTool({
       name: 'multiply',
       description: 'Multiply two numbers',
-      paramsSchema: Type.Object({
-        a: Type.Number({ description: 'First number' }),
-        b: Type.Number({ description: 'Second number' }),
-      }),
-      action: async ({ a, b }: { a: number; b: number }) => (a * b).toString(),
+      paramsSchema: twoNumberSchema,
+      action: async params => (params.a * params.b).toString(),
     });
 
     // Division
@@ -53,9 +49,9 @@ export class CalculatorAgent extends Agent {
         a: Type.Number({ description: 'Numerator' }),
         b: Type.Number({ description: 'Denominator' }),
       }),
-      action: async ({ a, b }: { a: number; b: number }) => {
-        if (b === 0) return 'Error: Division by zero';
-        return (a / b).toString();
+      action: async params => {
+        if (params.b === 0) return 'Error: Division by zero';
+        return (params.a / params.b).toString();
       },
     });
   }

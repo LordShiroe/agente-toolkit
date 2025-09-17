@@ -2,11 +2,12 @@ import { ModelAdapter } from './adapters/base';
 import { MemoryManager, SlidingWindowMemoryManager, Memory } from './memory';
 import { Planner } from './planner';
 import { getLogger } from './logger';
-import { Tool } from './types/Tool';
+import { Tool, Serializable } from './types/Tool';
+import { TSchema } from '@sinclair/typebox';
 
 export class Agent {
   private memoryManager: MemoryManager;
-  private tools: Tool[] = [];
+  private tools: Tool<any, any>[] = [];
   private prompt: string = '';
   private planner = new Planner();
   private logger = getLogger();
@@ -15,7 +16,9 @@ export class Agent {
     this.memoryManager = memoryManager || new SlidingWindowMemoryManager();
   }
 
-  addTool<TParams>(tool: Tool<TParams>) {
+  addTool<TParams extends TSchema, TResult extends Serializable = string>(
+    tool: Tool<TParams, TResult>
+  ) {
     this.tools.push(tool);
   }
 
