@@ -1,34 +1,16 @@
 import { ModelAdapter } from './adapters/base';
 import { Tool } from './agent';
 import { getLogger } from './logger';
-import {
-  ReferenceResolver,
-  ReferenceResolutionContext,
-  StepResultMetadata,
-} from './referenceResolver';
-import Ajv from 'ajv';
-import { TSchema } from '@sinclair/typebox';
+import { PlanStep } from './types/PlanStep';
+import { ExecutionPlan } from './types/ExecutionPlan';
 
-export interface PlanStep {
-  id: string;
-  toolName: string;
-  params: any;
-  dependsOn: string[];
-  status: 'pending' | 'completed' | 'failed';
-  result?: string;
-  structuredResult?: any; // Parsed result when resultSchema is available
-}
-
-export interface ExecutionPlan {
-  steps: PlanStep[];
-  context: Record<string, any>;
-  metadata: Record<string, StepResultMetadata>; // Store result schemas and tool info
-}
+import { ReferenceResolver, ReferenceResolutionContext } from './referenceResolver';
+import { PlanValidator } from './planValidator';
 
 export class Planner {
-  private ajv = new Ajv();
   private logger = getLogger();
   private referenceResolver = new ReferenceResolver();
+  private planValidator = new PlanValidator();
 
   async createPlan(
     message: string,
@@ -82,7 +64,6 @@ Use {{stepId}} in params to reference previous step results.`;
       return {
         steps: steps.map(step => ({ ...step, status: 'pending' as const })),
         context: {},
-        metadata: {},
       };
     } catch {
       throw new Error(`Failed to parse execution plan: ${response}`);
@@ -90,8 +71,8 @@ Use {{stepId}} in params to reference previous step results.`;
   }
 
   async executePlan(plan: ExecutionPlan, tools: Tool[]): Promise<string> {
-    // Validate plan references before execution
-    this._validatePlanReferences(plan, tools);
+    // Validate plan structure before execution
+    this.planValidator.validateStructure(plan, tools);
 
     const results: string[] = [];
 
@@ -117,16 +98,10 @@ Use {{stepId}} in params to reference previous step results.`;
             throw new Error(`Tool '${step.toolName}' not found`);
           }
 
-          // Store tool metadata for enhanced reference resolution
-          plan.metadata[step.id] = {
-            resultSchema: tool.resultSchema,
-            toolName: tool.name,
-          };
-
-          // Use enhanced reference resolution with metadata
+          // Use reference resolution with results context
           const context: ReferenceResolutionContext = {
             results: plan.context,
-            metadata: plan.metadata,
+            metadata: {}, // Empty metadata since we removed result validation
           };
 
           const processedParams = this.referenceResolver.resolveReferences(
@@ -137,23 +112,23 @@ Use {{stepId}} in params to reference previous step results.`;
           this.logger.logParameterResolution(step.id, step.params, processedParams);
 
           // Validate params
-          const validate = this.ajv.compile(tool.paramsSchema);
-          if (!validate(processedParams)) {
-            this.logger.logValidationError(step.toolName, validate.errors);
+          const validationResult = this.planValidator.validateParameters(
+            processedParams,
+            tool.paramsSchema
+          );
+          if (!validationResult.isValid) {
+            this.logger.logValidationError(step.toolName, validationResult.errors);
             throw new Error(
-              `Invalid params for tool '${step.toolName}': ${JSON.stringify(validate.errors)}`
+              `Invalid params for tool '${step.toolName}': ${JSON.stringify(
+                validationResult.errors
+              )}`
             );
           }
 
           step.result = await tool.action(processedParams);
 
-          // Parse and store structured result if resultSchema is available
-          if (tool.resultSchema) {
-            this._validateAndStoreStructuredResult(step, tool.resultSchema, tool.name);
-          }
-
           step.status = 'completed';
-          plan.context[step.id] = step.structuredResult || step.result;
+          plan.context[step.id] = step.result;
 
           const duration = Date.now() - startTime;
           this.logger.logToolExecution(step.toolName, processedParams, step.result, duration);
@@ -168,103 +143,5 @@ Use {{stepId}} in params to reference previous step results.`;
     }
 
     return results.join('\n');
-  }
-
-  private _validatePlanReferences(plan: ExecutionPlan, tools: Tool[]): void {
-    const toolMap = new Map(tools.map(t => [t.name, t]));
-
-    for (const step of plan.steps) {
-      const tool = toolMap.get(step.toolName);
-      if (!tool) {
-        this.logger.warn(`Tool '${step.toolName}' not found during plan validation`);
-        continue;
-      }
-
-      // Check if step dependencies exist and will have the expected properties
-      for (const depId of step.dependsOn) {
-        const depStep = plan.steps.find(s => s.id === depId);
-        if (!depStep) {
-          throw new Error(
-            `Plan validation failed: Step '${step.id}' depends on non-existent step '${depId}'`
-          );
-        }
-
-        const depTool = toolMap.get(depStep.toolName);
-        if (depTool?.resultSchema) {
-          // Store metadata for validation
-          plan.metadata[depId] = {
-            resultSchema: depTool.resultSchema,
-            toolName: depTool.name,
-          };
-        }
-      }
-
-      // Validate template references in step parameters
-      this._validateStepReferences(step, plan.metadata);
-    }
-  }
-
-  private _validateStepReferences(
-    step: PlanStep,
-    metadata: Record<string, StepResultMetadata>
-  ): void {
-    const paramStr = JSON.stringify(step.params);
-    const references = this.referenceResolver.extractTemplateReferences(paramStr);
-
-    for (const { stepId, property, fullMatch } of references) {
-      const stepMetadata = metadata[stepId];
-
-      if (!stepMetadata) {
-        this.logger.warn(
-          `Plan validation: Reference ${fullMatch} in step ${step.id} points to step without metadata`
-        );
-        continue;
-      }
-
-      // If we have a resultSchema and a property reference, validate the property exists
-      if (
-        property &&
-        stepMetadata.resultSchema?.type === 'object' &&
-        stepMetadata.resultSchema.properties
-      ) {
-        const availableProps = Object.keys(stepMetadata.resultSchema.properties);
-        if (!availableProps.includes(property)) {
-          this.logger.warn(
-            `Plan validation: Property '${property}' not found in ${stepId} schema. Available: ${availableProps.join(
-              ', '
-            )}`
-          );
-        }
-      }
-    }
-  }
-
-  private _validateAndStoreStructuredResult(
-    step: PlanStep,
-    resultSchema: TSchema,
-    toolName: string
-  ): void {
-    try {
-      // Try to parse the result as JSON to validate against schema
-      const parsedResult = JSON.parse(step.result!);
-      const validate = this.ajv.compile(resultSchema);
-
-      if (!validate(parsedResult)) {
-        this.logger.warn(`Tool '${toolName}' result does not match expected schema`, {
-          errors: validate.errors,
-          result: parsedResult,
-        });
-        // Still store the parsed result even if validation fails
-        step.structuredResult = parsedResult;
-      } else {
-        // Store the validated structured result
-        step.structuredResult = parsedResult;
-        this.logger.debug(`Tool '${toolName}' result validated successfully`);
-      }
-    } catch (error) {
-      // If result is not JSON, store as string
-      this.logger.debug(`Tool '${toolName}' returned non-JSON result: ${step.result}`);
-      step.structuredResult = step.result;
-    }
   }
 }
