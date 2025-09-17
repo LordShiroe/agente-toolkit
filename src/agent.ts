@@ -9,7 +9,6 @@ export interface Tool<TParams = any> {
   name: string;
   description: string;
   paramsSchema: TSchema;
-  resultSchema?: TSchema; // Optional schema defining the structure of the tool's output
   action: (params: TParams) => Promise<string>;
 }
 

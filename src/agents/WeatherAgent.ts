@@ -21,11 +21,6 @@ export class WeatherAgent extends Agent {
       paramsSchema: Type.Object({
         location: Type.String({ description: 'The location name to geocode' }),
       }),
-      resultSchema: Type.Object({
-        latitude: Type.Number({ description: 'Latitude coordinate' }),
-        longitude: Type.Number({ description: 'Longitude coordinate' }),
-        display_name: Type.String({ description: 'Full location name' }),
-      }),
       action: async (params: { location: string }) => {
         try {
           const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(
@@ -64,12 +59,6 @@ export class WeatherAgent extends Agent {
       paramsSchema: Type.Object({
         latitude: Type.Number({ description: 'Latitude coordinate' }),
         longitude: Type.Number({ description: 'Longitude coordinate' }),
-      }),
-      resultSchema: Type.Object({
-        temperature: Type.Number({ description: 'Temperature in Celsius' }),
-        windspeed: Type.Number({ description: 'Wind speed in km/h' }),
-        weathercode: Type.Number({ description: 'Weather condition code' }),
-        time: Type.String({ description: 'Timestamp of the weather data' }),
       }),
       action: async (params: { latitude: number; longitude: number }) => {
         try {

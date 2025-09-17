@@ -1,5 +1,6 @@
 import { Tool } from './agent';
-import { ExecutionPlan, ValidationResult } from './types';
+import { ExecutionPlan } from './types/ExecutionPlan';
+import { ValidationResult } from './types/ValidationResult';
 import { getLogger } from './logger';
 import Ajv from 'ajv';
 import { TSchema } from '@sinclair/typebox';
