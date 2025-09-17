@@ -7,6 +7,9 @@ import { ModelAdapter } from './adapters/base';
 import { SlidingWindowMemoryManager } from './memory';
 import { CalculatorAgent } from './agents/CalculatorAgent';
 import { WeatherAgent } from './agents/WeatherAgent';
+import { ManagerAgent } from './agents/ManagerAgent';
+import { registerAgent, clearRegistry } from './agentRegistry';
+import { createHandoffTool } from './tools/HandoffTool';
 import { initializeLogger, getLogger } from './logger';
 
 const program = new Command();
@@ -110,11 +113,8 @@ program
     const memorySize = parseInt(options.memorySize) || 30;
     const memoryManager = new SlidingWindowMemoryManager(memorySize);
 
-    // Instantiate the selected agent
-    const AgentClass = AVAILABLE_AGENTS[selectedAgentType].class;
-    const agent = new AgentClass(memoryManager);
-
-    logger.logAgentStart(AVAILABLE_AGENTS[selectedAgentType].name);
+    // We will instantiate the agent after selecting provider/model (adapter-aware)
+    let agent: Agent;
 
     try {
       let adapter: ModelAdapter;
@@ -126,9 +126,30 @@ program
         process.exit(1);
       }
 
-      console.log(
-        `🤖 Chat session started with ${AVAILABLE_AGENTS[selectedAgentType].name}. Type "exit" to quit, "memory" to see memory stats.`
-      );
+      // Instantiate agent(s) based on orchestration mode
+      if (options.mode === 'manager') {
+        agent = new ManagerAgent(adapter, memoryManager);
+        logger.logAgentStart('Manager Agent');
+      } else if (options.mode === 'decentralized') {
+        clearRegistry();
+        const calc = new CalculatorAgent(memoryManager);
+        const weather = new WeatherAgent(memoryManager);
+        registerAgent('calculator', calc);
+        registerAgent('weather', weather);
+
+        agent = new Agent(memoryManager);
+        agent.setPrompt(
+          'You are a router. Decide whether to hand off to the calculator or weather agent by calling the handoff_to_agent tool with the proper targetAgent.'
+        );
+        agent.addTool(createHandoffTool(adapter));
+        logger.logAgentStart('Router Agent (Decentralized)');
+      } else {
+        const AgentClass = AVAILABLE_AGENTS[selectedAgentType].class;
+        agent = new AgentClass(memoryManager);
+        logger.logAgentStart(AVAILABLE_AGENTS[selectedAgentType].name);
+      }
+
+      console.log(`🤖 Chat session started. Type "exit" to quit, "memory" to see memory stats.`);
       console.log(`📊 Memory Manager: Max ${memorySize} memories\n`);
 
       const rl = readline.createInterface({
@@ -167,12 +188,6 @@ program
               maxDurationMs: options.timeoutMs,
               stopOnFirstToolError: !!options.stopOnError,
             };
-
-            if (options.mode !== 'single') {
-              logger.warn(
-                'Selected mode is not yet wired (manager/decentralized). Running in single mode.'
-              );
-            }
 
             const result = await agent.run(input, adapter, runOptions);
             console.log(`🤖 Agent: ${result}\n`);
