@@ -1,6 +1,6 @@
 import fetch from 'node-fetch';
-import { Agent, Tool } from '../agent';
-import { ModelAdapter } from '../adapters/base';
+import { Agent } from '../agent';
+import { Tool } from '../types/Tool';
 import { MemoryManager } from '../memory';
 import { Type } from '@sinclair/typebox';
 

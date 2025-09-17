@@ -2,21 +2,12 @@ import { ModelAdapter } from './adapters/base';
 import { MemoryManager, SlidingWindowMemoryManager, Memory } from './memory';
 import { Planner } from './planner';
 import { getLogger } from './logger';
-import Ajv from 'ajv';
-import { TSchema } from '@sinclair/typebox';
-
-export interface Tool<TParams = any> {
-  name: string;
-  description: string;
-  paramsSchema: TSchema;
-  action: (params: TParams) => Promise<string>;
-}
+import { Tool } from './types/Tool';
 
 export class Agent {
   private memoryManager: MemoryManager;
   private tools: Tool[] = [];
   private prompt: string = '';
-  private ajv = new Ajv();
   private planner = new Planner();
   private logger = getLogger();
 

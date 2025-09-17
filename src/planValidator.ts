@@ -1,4 +1,4 @@
-import { Tool } from './agent';
+import { Tool } from './types/Tool';
 import { ExecutionPlan } from './types/ExecutionPlan';
 import { ValidationResult } from './types/ValidationResult';
 import { getLogger } from './logger';

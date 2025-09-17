@@ -1,5 +1,5 @@
 import { ModelAdapter } from './adapters/base';
-import { Tool } from './agent';
+import { Tool } from './types/Tool';
 import { getLogger } from './logger';
 import { PlanStep } from './types/PlanStep';
 import { ExecutionPlan } from './types/ExecutionPlan';

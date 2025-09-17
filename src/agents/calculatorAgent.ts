@@ -1,5 +1,4 @@
-import { Agent, Tool } from '../agent';
-import { ModelAdapter } from '../adapters/base';
+import { Agent } from '../agent';
 import { MemoryManager } from '../memory';
 import { Type } from '@sinclair/typebox';
 
