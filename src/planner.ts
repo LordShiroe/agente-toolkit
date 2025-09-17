@@ -133,10 +133,18 @@ Use {{stepId}} in params to reference previous step results.`;
           const duration = Date.now() - startTime;
           this.logger.logToolExecution(step.toolName, processedParams, step.result, duration);
 
-          results.push(`${step.id}: ${step.result}`);
+          // Properly serialize the result - if it's an object, stringify it
+          const serializedResult =
+            typeof step.result === 'object' && step.result !== null
+              ? JSON.stringify(step.result, null, 2)
+              : String(step.result);
+
+          results.push(`${step.id}: ${serializedResult}`);
         } catch (error) {
           step.status = 'failed';
           step.result = `Error: ${error instanceof Error ? error.message : String(error)}`;
+
+          // Error results are always strings, so no need for special serialization
           results.push(`${step.id}: ${step.result}`);
         }
       }

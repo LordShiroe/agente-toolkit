@@ -87,7 +87,11 @@ export class Agent {
 
       // Remember the execution steps
       plan.steps.forEach(step => {
-        this.remember(`Executed ${step.toolName}: ${step.result}`, 'tool_result', 0.6);
+        const serializedResult =
+          typeof step.result === 'object' && step.result !== null
+            ? JSON.stringify(step.result, null, 2)
+            : String(step.result);
+        this.remember(`Executed ${step.toolName}: ${serializedResult}`, 'tool_result', 0.6);
       });
 
       return result;
