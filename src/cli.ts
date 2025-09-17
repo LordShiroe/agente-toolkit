@@ -77,6 +77,12 @@ program
   .option('-m, --model <model>', 'Preferred model to override adapter default')
   .option('--memory-size <size>', 'Maximum number of memories to keep', '30')
   .option('-v, --verbose', 'Enable verbose logging for debugging')
+  .option('--mode <mode>', 'Orchestration mode (single|manager|decentralized)', 'single')
+  .option('--max-steps <n>', 'Max steps per run (safety ceiling)', (v: string) => parseInt(v, 10))
+  .option('--timeout-ms <ms>', 'Max duration per run in milliseconds', (v: string) =>
+    parseInt(v, 10)
+  )
+  .option('--stop-on-error', 'Stop execution on first tool error')
   .action(async options => {
     // Initialize logger based on verbose option
     initializeLogger({
@@ -155,7 +161,20 @@ program
           }
 
           try {
-            const result = await agent.run(input, adapter);
+            // Build run options from CLI flags
+            const runOptions = {
+              maxSteps: options.maxSteps,
+              maxDurationMs: options.timeoutMs,
+              stopOnFirstToolError: !!options.stopOnError,
+            };
+
+            if (options.mode !== 'single') {
+              logger.warn(
+                'Selected mode is not yet wired (manager/decentralized). Running in single mode.'
+              );
+            }
+
+            const result = await agent.run(input, adapter, runOptions);
             console.log(`🤖 Agent: ${result}\n`);
           } catch (error) {
             console.error('❌ Error:', error instanceof Error ? error.message : String(error));

@@ -3,6 +3,7 @@ import { MemoryManager, SlidingWindowMemoryManager, Memory } from './memory';
 import { Planner } from './planner';
 import { getLogger } from './logger';
 import { Tool, Serializable } from './types/Tool';
+import { RunOptions } from './types/RunOptions';
 import { TSchema } from '@sinclair/typebox';
 
 export class Agent {
@@ -51,16 +52,23 @@ export class Agent {
     return this.prompt;
   }
 
-  async run(message: string, model: ModelAdapter): Promise<string> {
-    this.logger.info('Starting agent execution', { message: message.substring(0, 50) + '...' });
+  async run(message: string, model: ModelAdapter, options: RunOptions = {}): Promise<string> {
+    this.logger.logRunStart({
+      message: message.substring(0, 50) + '...',
+      options,
+    });
     this.remember(message, 'conversation', 0.8);
-    const response = await this._executeDecisionCycle(message, model);
+    const response = await this._executeDecisionCycle(message, model, options);
     this.remember(`Agent response: ${response}`, 'conversation', 0.6);
-    this.logger.info('Agent execution completed');
+    this.logger.logRunEnd();
     return response;
   }
 
-  private async _executeDecisionCycle(message: string, model: ModelAdapter): Promise<string> {
+  private async _executeDecisionCycle(
+    message: string,
+    model: ModelAdapter,
+    options: RunOptions
+  ): Promise<string> {
     try {
       const relevantMemories = this.memoryManager.getRelevantMemories(message, 5);
       const memoryContext =
@@ -83,7 +91,7 @@ export class Agent {
 
       this.logger.logPlanCreation(message, this.tools, plan);
 
-      const result = await this.planner.executePlan(plan, this.tools);
+      const result = await this.planner.executePlan(plan, this.tools, options);
 
       // Remember the execution steps
       plan.steps.forEach(step => {

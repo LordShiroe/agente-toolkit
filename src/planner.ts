@@ -3,6 +3,7 @@ import { Tool } from './types/Tool';
 import { getLogger } from './logger';
 import { PlanStep } from './types/PlanStep';
 import { ExecutionPlan } from './types/ExecutionPlan';
+import { RunOptions } from './types/RunOptions';
 
 import { ReferenceResolver, ReferenceResolutionContext } from './referenceResolver';
 import { PlanValidator } from './planValidator';
@@ -70,11 +71,13 @@ Use {{stepId}} in params to reference previous step results.`;
     }
   }
 
-  async executePlan(plan: ExecutionPlan, tools: Tool[]): Promise<string> {
+  async executePlan(plan: ExecutionPlan, tools: Tool[], options: RunOptions = {}): Promise<string> {
     // Validate plan structure before execution
     this.planValidator.validateStructure(plan, tools);
 
     const results: string[] = [];
+    const runStart = Date.now();
+    let executedSteps = 0;
 
     while (plan.steps.some(step => step.status === 'pending')) {
       const executableSteps = plan.steps.filter(step => {
@@ -90,7 +93,19 @@ Use {{stepId}} in params to reference previous step results.`;
       }
 
       for (const step of executableSteps) {
-        const startTime = Date.now();
+        if (options.maxSteps !== undefined && executedSteps >= options.maxSteps) {
+          this.logger.warn('Max steps reached, stopping execution', { maxSteps: options.maxSteps });
+          return results.concat('Max steps reached, stopping.').join('\n');
+        }
+        if (options.maxDurationMs !== undefined && Date.now() - runStart > options.maxDurationMs) {
+          this.logger.warn('Max duration reached, stopping execution', {
+            maxDurationMs: options.maxDurationMs,
+          });
+          return results.concat('Max duration reached, stopping.').join('\n');
+        }
+
+        const stepStart = Date.now();
+        this.logger.logStepStart(step.id, step.toolName);
         try {
           const tool = tools.find(t => t.name === step.toolName);
 
@@ -130,8 +145,9 @@ Use {{stepId}} in params to reference previous step results.`;
           step.status = 'completed';
           plan.context[step.id] = step.result;
 
-          const duration = Date.now() - startTime;
+          const duration = Date.now() - stepStart;
           this.logger.logToolExecution(step.toolName, processedParams, step.result, duration);
+          this.logger.logStepEnd(step.id, step.toolName, duration);
 
           // Properly serialize the result - if it's an object, stringify it
           const serializedResult =
@@ -140,12 +156,21 @@ Use {{stepId}} in params to reference previous step results.`;
               : String(step.result);
 
           results.push(`${step.id}: ${serializedResult}`);
+          executedSteps += 1;
         } catch (error) {
           step.status = 'failed';
           step.result = `Error: ${error instanceof Error ? error.message : String(error)}`;
 
           // Error results are always strings, so no need for special serialization
           results.push(`${step.id}: ${step.result}`);
+
+          if (options.stopOnFirstToolError) {
+            this.logger.warn('Stopping on first tool error as configured', {
+              stepId: step.id,
+              toolName: step.toolName,
+            });
+            return results.join('\n');
+          }
         }
       }
     }

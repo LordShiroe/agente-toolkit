@@ -132,6 +132,27 @@ class AgentLogger {
   logAgentEnd() {
     this.info('Agent session ended');
   }
+
+  // Orchestration-focused helpers
+  logRunStart(meta?: any) {
+    this.info('Run started', meta);
+  }
+
+  logRunEnd(meta?: any) {
+    this.info('Run ended', meta);
+  }
+
+  logStepStart(stepId: string, toolName: string, meta?: any) {
+    this.debug(`Step started: ${stepId}`, { stepId, toolName, ...meta });
+  }
+
+  logStepEnd(stepId: string, toolName: string, durationMs?: number, meta?: any) {
+    this.info(`Step ended: ${stepId}`, { stepId, toolName, duration: durationMs, ...meta });
+  }
+
+  logHandoff(fromAgent: string, toAgent: string, meta?: any) {
+    this.info('Agent handoff', { fromAgent, toAgent, ...meta });
+  }
 }
 
 // Create a singleton instance
