@@ -105,9 +105,12 @@ program
       logger.info('Verbose mode enabled - detailed logging will be shown');
     }
 
-    // Display agent menu and get user selection
-    displayAgentMenu();
-    const selectedAgentType = await promptAgentSelection();
+    let selectedAgentType: AgentType | undefined;
+    if (options.mode === 'single') {
+      // Display agent menu and get user selection only in single mode
+      displayAgentMenu();
+      selectedAgentType = await promptAgentSelection();
+    }
 
     // Create memory manager with custom size if specified
     const memorySize = parseInt(options.memorySize) || 30;
@@ -143,10 +146,17 @@ program
         );
         agent.addTool(createHandoffTool(adapter));
         logger.logAgentStart('Router Agent (Decentralized)');
-      } else {
+      } else if (options.mode === 'single') {
+        if (!selectedAgentType) {
+          console.error('❌ No agent selected.');
+          process.exit(1);
+        }
         const AgentClass = AVAILABLE_AGENTS[selectedAgentType].class;
         agent = new AgentClass(memoryManager);
         logger.logAgentStart(AVAILABLE_AGENTS[selectedAgentType].name);
+      } else {
+        console.error(`❌ Unknown mode: ${options.mode}`);
+        process.exit(1);
       }
 
       console.log(`🤖 Chat session started. Type "exit" to quit, "memory" to see memory stats.`);
