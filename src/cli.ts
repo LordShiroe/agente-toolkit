@@ -34,7 +34,7 @@ function displayAgentMenu(): void {
   console.log('\n🤖 Available AI Agents:');
   console.log('='.repeat(40));
 
-  Object.entries(AVAILABLE_AGENTS).forEach(([key, info], index) => {
+  Object.entries(AVAILABLE_AGENTS).forEach(([_key, info], index) => {
     console.log(`${index + 1}. ${info.name}`);
     console.log(`   ${info.description}`);
     console.log('');
@@ -131,14 +131,21 @@ program
 
       // Instantiate agent(s) based on orchestration mode
       if (options.mode === 'manager') {
+        // Register the agents with their metadata in the registry first
+        const calc = new CalculatorAgent(memoryManager);
+        const weather = new WeatherAgent(memoryManager);
+
+        registerAgent('calculator', calc, CalculatorAgent.metadata);
+        registerAgent('weather', weather, WeatherAgent.metadata);
+
         agent = new ManagerAgent(adapter, memoryManager);
         logger.logAgentStart('Manager Agent');
       } else if (options.mode === 'decentralized') {
         clearRegistry();
         const calc = new CalculatorAgent(memoryManager);
         const weather = new WeatherAgent(memoryManager);
-        registerAgent('calculator', calc);
-        registerAgent('weather', weather);
+        registerAgent('calculator', calc, CalculatorAgent.metadata);
+        registerAgent('weather', weather, WeatherAgent.metadata);
 
         agent = new Agent(memoryManager);
         agent.setPrompt(

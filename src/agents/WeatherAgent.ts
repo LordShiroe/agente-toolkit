@@ -3,14 +3,54 @@ import { Agent } from '../agent';
 import { Tool } from '../types/Tool';
 import { MemoryManager } from '../memory';
 import { Type } from '@sinclair/typebox';
+import { AgentRegistration } from '../types/AgentMetadata';
 
 export class WeatherAgent extends Agent {
+  static readonly metadata: AgentRegistration = {
+    metadata: {
+      id: 'weather',
+      name: 'Weather Agent',
+      description: 'Provides current weather information for any location worldwide',
+      categories: ['weather', 'location', 'environment'],
+      keywords: [
+        'weather',
+        'temperature',
+        'forecast',
+        'climate',
+        'rain',
+        'sunny',
+        'cloudy',
+        'wind',
+      ],
+      priority: 5,
+      enabled: true,
+    },
+    capabilities: {
+      taskTypes: ['weather queries', 'location-based weather', 'current conditions'],
+      examples: [
+        'What is the weather in New York?',
+        'How is the weather in London today?',
+        'Tell me the current temperature in Tokyo',
+        'Is it raining in Paris right now?',
+      ],
+      limitations: [
+        'Only provides current weather',
+        'Cannot provide extended forecasts',
+        'Requires internet connection',
+      ],
+    },
+  };
+
   constructor(memoryManager?: MemoryManager) {
     super(memoryManager);
     this.setupWeatherTools();
     this.setPrompt(
       `You are a helpful weather assistant. When users ask about weather, use the available tools to get current weather information for locations. Always be helpful and provide clear weather reports.`
     );
+  }
+
+  getMetadata(): AgentRegistration {
+    return WeatherAgent.metadata;
   }
 
   private setupWeatherTools() {
