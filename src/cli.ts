@@ -8,8 +8,7 @@ import { SlidingWindowMemoryManager } from './memory';
 import { CalculatorAgent } from './agents/CalculatorAgent';
 import { WeatherAgent } from './agents/WeatherAgent';
 import { ManagerAgent } from './agents/ManagerAgent';
-import { registerAgent, clearRegistry } from './agentRegistry';
-import { createHandoffTool } from './tools/HandoffTool';
+import { registerAgent } from './agentRegistry';
 import { initializeLogger, getLogger } from './logger';
 
 const program = new Command();
@@ -80,7 +79,7 @@ program
   .option('-m, --model <model>', 'Preferred model to override adapter default')
   .option('--memory-size <size>', 'Maximum number of memories to keep', '30')
   .option('-v, --verbose', 'Enable verbose logging for debugging')
-  .option('--mode <mode>', 'Orchestration mode (single|manager|decentralized)', 'single')
+  .option('--mode <mode>', 'Orchestration mode (single|manager)', 'single')
   .option('--max-steps <n>', 'Max steps per run (safety ceiling)', (v: string) => parseInt(v, 10))
   .option('--timeout-ms <ms>', 'Max duration per run in milliseconds', (v: string) =>
     parseInt(v, 10)
@@ -140,19 +139,6 @@ program
 
         agent = new ManagerAgent(adapter, memoryManager);
         logger.logAgentStart('Manager Agent');
-      } else if (options.mode === 'decentralized') {
-        clearRegistry();
-        const calc = new CalculatorAgent(memoryManager);
-        const weather = new WeatherAgent(memoryManager);
-        registerAgent('calculator', calc, CalculatorAgent.metadata);
-        registerAgent('weather', weather, WeatherAgent.metadata);
-
-        agent = new Agent(memoryManager);
-        agent.setPrompt(
-          'You are a router. Decide whether to hand off to the calculator or weather agent by calling the handoff_to_agent tool with the proper targetAgent.'
-        );
-        agent.addTool(createHandoffTool(adapter));
-        logger.logAgentStart('Router Agent (Decentralized)');
       } else if (options.mode === 'single') {
         if (!selectedAgentType) {
           console.error('❌ No agent selected.');

@@ -149,10 +149,6 @@ class AgentLogger {
   logStepEnd(stepId: string, toolName: string, durationMs?: number, meta?: any) {
     this.info(`Step ended: ${stepId}`, { stepId, toolName, duration: durationMs, ...meta });
   }
-
-  logHandoff(fromAgent: string, toAgent: string, meta?: any) {
-    this.info('Agent handoff', { fromAgent, toAgent, ...meta });
-  }
 }
 
 // Create a singleton instance
