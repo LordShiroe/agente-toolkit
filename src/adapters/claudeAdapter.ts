@@ -79,63 +79,28 @@ export class ClaudeAdapter extends BaseAdapter {
 
       let finalContent = '';
       const messages: Anthropic.MessageParam[] = [{ role: 'user', content: prompt }];
+      let currentResponse = response;
 
-      // Process tool calls
-      for (const block of response.content) {
-        if (block.type === 'text') {
-          finalContent += block.text;
-        } else if (block.type === 'tool_use') {
-          // Find and execute the tool
-          const tool = tools.find(t => t.name === block.name);
-          if (!tool) {
-            throw new Error(`Tool ${block.name} not found`);
-          }
+      // Continue conversation while Claude wants to make tool calls
+      let hasMoreToolCalls = this.hasToolCalls(currentResponse);
 
-          const result = await tool.action(block.input as Static<typeof tool.paramsSchema>);
+      while (hasMoreToolCalls) {
+        await this.processToolCalls(currentResponse, tools, toolCalls, messages);
 
-          toolCalls.push({
-            name: block.name,
-            arguments: block.input,
-            result,
-          });
+        // Get follow-up response
+        currentResponse = await this.client.messages.create({
+          model: this.model,
+          max_tokens: 4096,
+          messages,
+          tools: anthropicTools,
+          tool_choice: { type: 'auto' },
+        });
 
-          // Continue conversation with tool result
-          messages.push({
-            role: 'assistant',
-            content: response.content,
-          });
-
-          messages.push({
-            role: 'user',
-            content: [
-              {
-                type: 'tool_result',
-                tool_use_id: block.id,
-                content: JSON.stringify(result),
-              },
-            ],
-          });
-
-          // Get follow-up response
-          const followUp = await this.client.messages.create({
-            model: this.model,
-            max_tokens: 4096,
-            messages,
-            tools: anthropicTools,
-            tool_choice: { type: 'auto' },
-          });
-
-          // Add follow-up text
-          const followUpText = followUp.content
-            .filter((block): block is Anthropic.TextBlock => block.type === 'text')
-            .map(block => block.text)
-            .join('\n');
-
-          if (followUpText) {
-            finalContent += '\n' + followUpText;
-          }
-        }
+        hasMoreToolCalls = this.hasToolCalls(currentResponse);
       }
+
+      // Extract final text content (no more tool calls)
+      finalContent = this.extractTextContent(currentResponse);
 
       return {
         content: finalContent,
@@ -174,5 +139,69 @@ export class ClaudeAdapter extends BaseAdapter {
       },
       required: ['value'],
     };
+  }
+
+  /**
+   * Check if a response contains tool calls
+   */
+  private hasToolCalls(response: Anthropic.Message): boolean {
+    return response.content.some(block => block.type === 'tool_use');
+  }
+
+  /**
+   * Extract text content from a response
+   */
+  private extractTextContent(response: Anthropic.Message): string {
+    return response.content
+      .filter((block): block is Anthropic.TextBlock => block.type === 'text')
+      .map(block => block.text)
+      .join('');
+  }
+
+  /**
+   * Process all tool calls in a response
+   */
+  private async processToolCalls(
+    response: Anthropic.Message,
+    tools: Tool[],
+    toolCalls: Array<{ name: string; arguments: any; result: any }>,
+    messages: Anthropic.MessageParam[]
+  ): Promise<void> {
+    // Add assistant message with current response
+    messages.push({
+      role: 'assistant',
+      content: response.content,
+    });
+
+    // Process each tool call
+    for (const block of response.content) {
+      if (block.type === 'tool_use') {
+        // Find and execute the tool
+        const tool = tools.find(t => t.name === block.name);
+        if (!tool) {
+          throw new Error(`Tool ${block.name} not found`);
+        }
+
+        const result = await tool.action(block.input as Static<typeof tool.paramsSchema>);
+
+        toolCalls.push({
+          name: block.name,
+          arguments: block.input,
+          result,
+        });
+
+        // Add tool result to conversation
+        messages.push({
+          role: 'user',
+          content: [
+            {
+              type: 'tool_result',
+              tool_use_id: block.id,
+              content: JSON.stringify(result),
+            },
+          ],
+        });
+      }
+    }
   }
 }
