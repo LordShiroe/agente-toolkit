@@ -1,7 +1,10 @@
 export { Agent } from './agent';
 export { SlidingWindowMemoryManager } from './memory';
 export { ClaudeAdapter } from './adapters/claudeAdapter';
-export type { ModelAdapter } from './adapters/base';
+export type { ModelAdapter, ToolExecutionResult } from './adapters/base';
+
+// Enhanced planner with native tool support
+export { Planner } from './planner';
 
 // Agent Registry and Management
 export {

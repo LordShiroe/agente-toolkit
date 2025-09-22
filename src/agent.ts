@@ -81,30 +81,76 @@ export class Agent {
         contextLength: memoryContext.length,
       });
 
-      const plan = await this.planner.createPlan(
-        message,
-        this.tools,
-        memoryContext,
-        this.prompt,
-        model
-      );
+      let result: string;
 
-      this.logger.logPlanCreation(message, this.tools, plan);
+      // Try native execution first if adapter supports it
+      if (model.supportsNativeTools) {
+        try {
+          this.logger.debug('Attempting native tool execution');
 
-      const result = await this.planner.executePlan(plan, this.tools, options);
+          // Build the full prompt with context
+          const fullPrompt = this._buildPrompt(message, memoryContext);
 
-      // Remember the execution steps
-      plan.steps.forEach(step => {
-        const serializedResult =
-          typeof step.result === 'object' && step.result !== null
-            ? JSON.stringify(step.result, null, 2)
-            : String(step.result);
-        this.remember(`Executed ${step.toolName}: ${serializedResult}`, 'tool_result', 0.6);
+          this.logger.logPrompt(fullPrompt, {
+            userMessage: message,
+            toolCount: this.tools.length,
+            executionMode: 'native',
+          });
+
+          const executionResult = await model.executeWithTools(fullPrompt, this.tools);
+
+          this.logger.logModelResponse(executionResult.content, {
+            operation: 'native_execution',
+            toolCallCount: executionResult.toolCalls.length,
+            success: executionResult.success,
+          });
+
+          if (executionResult.success) {
+            result = executionResult.content;
+            this.logger.debug('Native execution successful');
+          } else {
+            throw new Error(`Native execution failed: ${executionResult.errors?.join(', ')}`);
+          }
+        } catch (nativeError) {
+          this.logger.debug('Native execution failed, falling back to planner', {
+            error: nativeError instanceof Error ? nativeError.message : String(nativeError),
+          });
+
+          // Fallback to planner execution
+          result = await this.planner.execute(
+            message,
+            this.tools,
+            memoryContext,
+            this.prompt,
+            model,
+            options
+          );
+        }
+      } else {
+        // Use planner execution directly
+        this.logger.debug('Using planner execution (adapter does not support native tools)');
+        result = await this.planner.execute(
+          message,
+          this.tools,
+          memoryContext,
+          this.prompt,
+          model,
+          options
+        );
+      }
+
+      // Log the overall execution result
+      this.logger.debug('Agent execution completed', {
+        executionType: model.supportsNativeTools ? 'native' : 'planned',
+        resultLength: result.length,
       });
+
+      // Remember the overall result
+      this.remember(`Agent processed request. Result: ${result}`, 'tool_result', 0.6);
 
       return result;
     } catch (error) {
-      const errorMessage = `Planning or execution failed: ${
+      const errorMessage = `Execution failed: ${
         error instanceof Error ? error.message : String(error)
       }`;
       this.logger.error('Agent execution failed', {
@@ -112,5 +158,21 @@ export class Agent {
       });
       return errorMessage;
     }
+  }
+
+  private _buildPrompt(message: string, memoryContext: string): string {
+    let fullPrompt = '';
+
+    if (this.prompt) {
+      fullPrompt += `${this.prompt}\n\n`;
+    }
+
+    if (memoryContext && memoryContext !== 'No relevant context available.') {
+      fullPrompt += `Relevant context:\n${memoryContext}\n\n`;
+    }
+
+    fullPrompt += `User request: ${message}`;
+
+    return fullPrompt;
   }
 }

@@ -13,6 +13,32 @@ export class Planner {
   private referenceResolver = new ReferenceResolver();
   private planValidator = new PlanValidator();
 
+  /**
+   * Execute a request using traditional planning approach
+   */
+  async execute(
+    message: string,
+    tools: Tool[],
+    memoryContext: string,
+    systemPrompt: string,
+    model: ModelAdapter,
+    options: RunOptions = {}
+  ): Promise<string> {
+    this.logger.info('Using planned execution', {
+      adapterName: model.name,
+      toolCount: tools.length,
+    });
+
+    const plan = await this.createPlan(message, tools, memoryContext, systemPrompt, model);
+
+    this.logger.logPlanCreation(message, tools, { plan });
+
+    return this.executePlan(plan, tools, options);
+  }
+
+  /**
+   * Create a traditional execution plan
+   */
   async createPlan(
     message: string,
     tools: Tool[],
@@ -71,6 +97,9 @@ Use {{stepId}} in params to reference previous step results.`;
     }
   }
 
+  /**
+   * Execute a plan
+   */
   async executePlan(plan: ExecutionPlan, tools: Tool[], options: RunOptions = {}): Promise<string> {
     // Validate plan structure before execution
     this.planValidator.validateStructure(plan, tools);
@@ -116,7 +145,7 @@ Use {{stepId}} in params to reference previous step results.`;
           // Use reference resolution with results context
           const context: ReferenceResolutionContext = {
             results: plan.context,
-            metadata: {}, // Empty metadata since we removed result validation
+            metadata: {},
           };
 
           const processedParams = this.referenceResolver.resolveReferences(
