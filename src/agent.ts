@@ -117,7 +117,7 @@ export class Agent {
           });
 
           // Fallback to planner execution
-          result = await this.planner.execute(
+          const rawResult = await this.planner.execute(
             message,
             this.tools,
             memoryContext,
@@ -125,11 +125,14 @@ export class Agent {
             model,
             options
           );
+
+          // Convert planner output to conversational response
+          result = await this._generateConversationalResponse(message, rawResult, model);
         }
       } else {
         // Use planner execution directly
         this.logger.debug('Using planner execution (adapter does not support native tools)');
-        result = await this.planner.execute(
+        const rawResult = await this.planner.execute(
           message,
           this.tools,
           memoryContext,
@@ -137,6 +140,9 @@ export class Agent {
           model,
           options
         );
+
+        // Convert planner output to conversational response
+        result = await this._generateConversationalResponse(message, rawResult, model);
       }
 
       // Log the overall execution result
@@ -174,5 +180,38 @@ export class Agent {
     fullPrompt += `User request: ${message}`;
 
     return fullPrompt;
+  }
+
+  /**
+   * Convert raw planner output to a conversational response
+   */
+  private async _generateConversationalResponse(
+    originalMessage: string,
+    rawResult: string,
+    model: ModelAdapter
+  ): Promise<string> {
+    const conversationalPrompt = `${
+      this.prompt ? this.prompt + '\n\n' : ''
+    }The user asked: "${originalMessage}"
+
+I executed the following tools to fulfill their request:
+
+${rawResult}
+
+Please provide a natural, helpful, conversational response to the user based on these tool execution results. Format the information in a user-friendly way.`;
+
+    this.logger.debug('Generating conversational response from planner output');
+
+    try {
+      const conversationalResponse = await model.complete(conversationalPrompt);
+      this.logger.debug('Conversational response generated successfully');
+      return conversationalResponse;
+    } catch (error) {
+      this.logger.warn('Failed to generate conversational response, returning raw result', {
+        error: error instanceof Error ? error.message : String(error),
+      });
+      // Fallback to raw result if conversation generation fails
+      return rawResult;
+    }
   }
 }
