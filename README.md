@@ -1,96 +1,136 @@
-# Agente Toolkit
+# agente-toolkit
 
-A minimal TypeScript library for building AI agents with orchestration patterns (single-agent loops and intelligent manager agents). Features an **intelligent generic ManagerAgent** that dynamically discovers and routes to specialized agents using keywords and capabilities.
+A modern TypeScript library for building AI agents with **native tool calling** and intelligent orchestration patterns. Features both single-agent execution and intelligent manager agents that automatically discover and route to specialized agents.
 
-## Features
+## 🚀 Key Features
 
-- **Single-agent planning/execution** with memory and tools
+### **Native Tool Calling Support**
+
+- **Claude Native Integration**: Leverages Anthropic's built-in tool calling for optimal performance
+- **Automatic Fallback**: Gracefully falls back to traditional planning when native tools aren't available
+- **Adapter-Driven**: Clean abstraction that works with multiple LLM providers
+
+### **Intelligent Agent Architecture**
+
+- **Single-agent execution** with memory, tools, and conversational responses
 - **Intelligent Manager pattern** via enhanced `ManagerAgent` with dynamic agent discovery
 - **Smart routing** using agent keywords, capabilities, and examples for better delegation
-- **Agent metadata system** for rich agent descriptions and intelligent routing
-- **Safety guardrails**: max steps, max duration, stop-on-first-error
-- **Structured logging** with step-level timings
+- **Clean Architecture**: Separated concerns with ExecutionEngine, ResponseProcessor, and Planner
 
-## Key Enhancement: Generic ManagerAgent
+### **Advanced Capabilities**
 
-The `ManagerAgent` now intelligently manages any registered agents without hardcoding:
+- **Conversational Responses**: Automatic post-processing converts raw tool results into natural language
+- **Memory Management**: Context-aware memory with relevance scoring
+- **Safety Guardrails**: Max steps, max duration, stop-on-first-error
+- **Comprehensive Logging**: Detailed execution tracking with step-level timings
+
+## 🏗️ Architecture Overview
+
+```
+Agent (Coordinator)
+├── ExecutionEngine (Execution Orchestration)
+│   ├── Native tool calling (when supported)
+│   ├── Fallback to planned execution
+│   └── ResponseProcessor (Conversational formatting)
+└── Planner (Traditional step-by-step execution)
+    ├── Plan creation and validation
+    └── Tool coordination and execution
+```
+
+## 🎯 Enhanced ManagerAgent
+
+The `ManagerAgent` intelligently manages any registered agents with automatic discovery:
 
 - **Dynamic Discovery**: Automatically finds and creates tools for all registered agents
 - **Keyword-based Routing**: Uses agent keywords to match user requests to appropriate agents
 - **Capability Awareness**: Leverages task types, examples, and limitations for smart delegation
-- **Rich Context**: Generates detailed prompts with agent capabilities and routing guidelines
+- **Native Tool Integration**: Benefits from both native tool calling and conversational responses
 
 ### Quick Example
 
 ```typescript
-import { ManagerAgent, CalculatorAgent, WeatherAgent, registerAgent } from 'ai-noob';
+import { ManagerAgent, CalculatorAgent, WeatherAgent, registerAgent, ClaudeAdapter } from 'ai-noob';
 
 // Register agents with their metadata
 registerAgent('calculator', new CalculatorAgent(), CalculatorAgent.metadata);
 registerAgent('weather', new WeatherAgent(), WeatherAgent.metadata);
 
+// Create adapter with native tool support
+const adapter = new ClaudeAdapter(process.env.ANTHROPIC_API_KEY);
+
 // Create intelligent manager that routes based on keywords and capabilities
 const manager = new ManagerAgent(adapter);
 // Now handles: "Calculate 15+27" → Calculator, "Weather in NYC" → Weather
+// All with conversational responses!
 ```
 
-## Install
+## 📦 Install
 
-Clone and install deps:
+Clone and install dependencies:
 
 ```bash
+git clone <repository-url>
+cd agente-toolkit
 npm install
 npm run build
 ```
 
-## CLI Quickstart
+## 🚀 CLI Quickstart
 
-Start the chat and select an agent from the menu. Supply your Anthropic API key.
+Start the interactive chat and select an agent from the menu. Supply your Anthropic API key.
 
-Flags:
+### Available Flags:
 
-- `--mode single|manager` (default: `single`)
-- `--max-steps <n>` safety ceiling for steps
-- `--timeout-ms <ms>` safety ceiling for duration
-- `--stop-on-error` stop on first tool failure
-- `--model <name>` override Claude model
+- `--mode single|manager` (default: `single`) - Choose between single agent or intelligent manager
+- `--max-steps <n>` - Safety ceiling for execution steps
+- `--timeout-ms <ms>` - Safety ceiling for execution duration
+- `--stop-on-error` - Stop on first tool failure
+- `--model <name>` - Override Claude model (default: claude-sonnet-4)
+- `--verbose` - Enable detailed logging
 
-Examples:
+### Examples:
 
-Single agent (Calculator or Weather):
-
-```bash
-npm run build
-node dist/cli.js chat -k $ANTHROPIC_API_KEY --mode single --max-steps 8 --timeout-ms 20000
-```
-
-Manager agent (intelligently delegates to Calculator/Weather using keywords and capabilities):
+**Single Agent Mode** (Calculator or Weather with native tool calling):
 
 ```bash
 npm run build
-node dist/cli.js chat -k $ANTHROPIC_API_KEY --mode manager --max-steps 12
+node dist/cli.js chat -k $ANTHROPIC_API_KEY --mode single --max-steps 8 --verbose
 ```
 
-## Programmatic Usage
+**Manager Agent Mode** (Intelligent delegation with native tool optimization):
 
-### Basic Agent
+```bash
+npm run build
+node dist/cli.js chat -k $ANTHROPIC_API_KEY --mode manager --max-steps 12 --verbose
+```
 
-```ts
+## 💻 Programmatic Usage
+
+### Basic Agent with Native Tool Support
+
+```typescript
 import { Agent, ClaudeAdapter } from 'ai-noob';
 
+// Create agent with native tool calling support
 const agent = new Agent();
 agent.setPrompt('You are a helpful assistant.');
-// agent.addTool(...)
+// agent.addTool(...) - Add your custom tools
 
-const adapter = new ClaudeAdapter(process.env.ANTHROPIC_API_KEY!);
-const result = await agent.run('Hello!', adapter, { maxSteps: 8, stopOnFirstToolError: true });
-console.log(result);
+// Claude adapter automatically uses native tools when available
+const adapter = new ClaudeAdapter(process.env.ANTHROPIC_API_KEY);
+
+// Get conversational responses regardless of execution method
+const result = await agent.run('Hello!', adapter, {
+  maxSteps: 8,
+  stopOnFirstToolError: true,
+});
+console.log(result); // Natural, conversational response
 ```
 
-### Intelligent Manager Agent
+### Intelligent Manager Agent with Native Tools
 
-```ts
-import { ManagerAgent, CalculatorAgent, WeatherAgent, registerAgent } from 'ai-noob';
+```typescript
+import { ManagerAgent, CalculatorAgent, WeatherAgent, registerAgent, ClaudeAdapter } from 'ai-noob';
 
 // Register agents with rich metadata
 const calc = new CalculatorAgent();
@@ -99,28 +139,46 @@ const weather = new WeatherAgent();
 registerAgent('calculator', calc, CalculatorAgent.metadata);
 registerAgent('weather', weather, WeatherAgent.metadata);
 
-// Create manager that intelligently routes based on keywords and capabilities
+// Create adapter with native tool calling support
+const adapter = new ClaudeAdapter(process.env.ANTHROPIC_API_KEY);
+
+// Create manager that intelligently routes and provides conversational responses
 const manager = new ManagerAgent(adapter);
 
-// The manager now understands:
-// "Calculate 15 + 27" → Routes to Calculator (matches keywords: calculate, math, add)
-// "Weather in Tokyo" → Routes to Weather (matches keywords: weather, temperature)
-// "What's 50 divided by 2?" → Routes to Calculator (matches task type: arithmetic)
+// The manager intelligently routes with natural responses:
+// "Calculate 15 + 27" → Calculator agent → "The result is 42"
+// "Weather in Tokyo" → Weather agent → "Current weather in Tokyo is 22°C with clear skies"
+// "What's 50 divided by 2?" → Calculator agent → "50 divided by 2 equals 25"
 
 const result = await manager.run('What is 25 * 4?', adapter);
+// Returns: "25 multiplied by 4 equals 100"
 ```
 
-### Custom Agent with Metadata
+### Architecture Benefits
 
-```ts
-import { Agent, AgentRegistration } from 'ai-noob';
+```typescript
+// Native tool calling (when supported)
+const result1 = await agent.run('Weather in Paris', claudeAdapter);
+// → Uses Claude's native tools → Conversational response
+
+// Automatic fallback (when native tools fail or unavailable)
+const result2 = await agent.run('Weather in Paris', basicAdapter);
+// → Uses traditional planner → Converts to conversational response
+
+// Both paths provide natural, user-friendly responses!
+```
+
+### Custom Agent with Modern Architecture
+
+```typescript
+import { Agent, AgentRegistration, ClaudeAdapter } from 'ai-noob';
 
 class CustomAgent extends Agent {
   static readonly metadata: AgentRegistration = {
     metadata: {
       id: 'custom',
       name: 'Custom Agent',
-      description: 'Handles custom tasks',
+      description: 'Handles custom tasks with native tool support',
       categories: ['utility', 'custom'],
       keywords: ['custom', 'utility', 'helper', 'process'],
       priority: 3,
@@ -134,18 +192,37 @@ class CustomAgent extends Agent {
 
   constructor() {
     super();
-    // Add custom tools...
+    this.setPrompt('I am a helpful custom utility agent.');
+    // Add custom tools that benefit from native calling...
   }
 }
 
-// Register and use with ManagerAgent
+// Register and use with ManagerAgent (gets native tool benefits automatically)
 registerAgent('custom', new CustomAgent(), CustomAgent.metadata);
-const manager = new ManagerAgent(adapter); // Automatically includes custom agent
+const manager = new ManagerAgent(new ClaudeAdapter(process.env.ANTHROPIC_API_KEY));
 ```
 
-## Notes
+## 🔧 Technical Highlights
 
-- The **ManagerAgent** now intelligently routes requests using agent keywords, capabilities, and examples
-- **Agent metadata** enables dynamic discovery and smart delegation without hardcoding agent knowledge
-- **Weather functions** call public APIs; ensure you have network access when using them
-- **Logging** is verbose in `--verbose` mode and includes prompts/responses in detail
+### Execution Flow
+
+1. **Agent receives request** → Memory retrieval → Context building
+2. **ExecutionEngine decides** → Native tools (if supported) OR Traditional planner
+3. **Native path**: Direct tool calling → Immediate conversational response
+4. **Planned path**: Step-by-step execution → ResponseProcessor → Conversational response
+5. **Result**: Always natural, user-friendly responses regardless of execution method
+
+### Adapter Support
+
+- **ClaudeAdapter**: Full native tool calling support with automatic fallback
+- **Future adapters**: Can implement native tools or rely on traditional planning
+- **Graceful degradation**: System works with any adapter capability level
+
+## 📝 Notes
+
+- **Native tool calling** provides faster, more natural interactions when available
+- **Automatic fallback** ensures reliability across different model capabilities
+- **Conversational responses** are generated for all execution paths
+- **ManagerAgent** automatically benefits from native tools for all registered agents
+- **Weather functions** call public APIs; ensure network access when using them
+- **Verbose logging** (`--verbose`) shows detailed execution flow including native vs planned paths
