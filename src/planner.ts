@@ -31,7 +31,7 @@ export class Planner {
 
     const plan = await this.createPlan(message, tools, memoryContext, systemPrompt, model);
 
-    this.logger.logPlanCreation(message, tools, { plan });
+    this.logger.logPlanCreation(message, tools, plan);
 
     return this.executePlan(plan, tools, options);
   }
