@@ -1,6 +1,6 @@
 import { ModelAdapter } from './adapters/base';
 import { MemoryManager, SlidingWindowMemoryManager, Memory } from './memory';
-import { Planner } from './planner';
+import { ExecutionEngine, ExecutionContext } from './executionEngine';
 import { getLogger } from './logger';
 import { Tool, Serializable } from './types/Tool';
 import { RunOptions } from './types/RunOptions';
@@ -10,7 +10,7 @@ export class Agent {
   private memoryManager: MemoryManager;
   private tools: Tool<any, any>[] = [];
   private prompt: string = '';
-  private planner = new Planner();
+  private executionEngine = new ExecutionEngine();
   private logger = getLogger();
 
   constructor(memoryManager?: MemoryManager) {
@@ -81,69 +81,18 @@ export class Agent {
         contextLength: memoryContext.length,
       });
 
-      let result: string;
+      // Create execution context
+      const executionContext: ExecutionContext = {
+        message,
+        tools: this.tools,
+        memoryContext,
+        systemPrompt: this.prompt,
+        model,
+        options,
+      };
 
-      // Try native execution first if adapter supports it
-      if (model.supportsNativeTools) {
-        try {
-          this.logger.debug('Attempting native tool execution');
-
-          // Build the full prompt with context
-          const fullPrompt = this._buildPrompt(message, memoryContext);
-
-          this.logger.logPrompt(fullPrompt, {
-            userMessage: message,
-            toolCount: this.tools.length,
-            executionMode: 'native',
-          });
-
-          const executionResult = await model.executeWithTools(fullPrompt, this.tools);
-
-          this.logger.logModelResponse(executionResult.content, {
-            operation: 'native_execution',
-            toolCallCount: executionResult.toolCalls.length,
-            success: executionResult.success,
-          });
-
-          if (executionResult.success) {
-            result = executionResult.content;
-            this.logger.debug('Native execution successful');
-          } else {
-            throw new Error(`Native execution failed: ${executionResult.errors?.join(', ')}`);
-          }
-        } catch (nativeError) {
-          this.logger.debug('Native execution failed, falling back to planner', {
-            error: nativeError instanceof Error ? nativeError.message : String(nativeError),
-          });
-
-          // Fallback to planner execution
-          const rawResult = await this.planner.execute(
-            message,
-            this.tools,
-            memoryContext,
-            this.prompt,
-            model,
-            options
-          );
-
-          // Convert planner output to conversational response
-          result = await this._generateConversationalResponse(message, rawResult, model);
-        }
-      } else {
-        // Use planner execution directly
-        this.logger.debug('Using planner execution (adapter does not support native tools)');
-        const rawResult = await this.planner.execute(
-          message,
-          this.tools,
-          memoryContext,
-          this.prompt,
-          model,
-          options
-        );
-
-        // Convert planner output to conversational response
-        result = await this._generateConversationalResponse(message, rawResult, model);
-      }
+      // Delegate to execution engine
+      const result = await this.executionEngine.execute(executionContext);
 
       // Log the overall execution result
       this.logger.debug('Agent execution completed', {
@@ -163,55 +112,6 @@ export class Agent {
         error: error instanceof Error ? error.message : String(error),
       });
       return errorMessage;
-    }
-  }
-
-  private _buildPrompt(message: string, memoryContext: string): string {
-    let fullPrompt = '';
-
-    if (this.prompt) {
-      fullPrompt += `${this.prompt}\n\n`;
-    }
-
-    if (memoryContext && memoryContext !== 'No relevant context available.') {
-      fullPrompt += `Relevant context:\n${memoryContext}\n\n`;
-    }
-
-    fullPrompt += `User request: ${message}`;
-
-    return fullPrompt;
-  }
-
-  /**
-   * Convert raw planner output to a conversational response
-   */
-  private async _generateConversationalResponse(
-    originalMessage: string,
-    rawResult: string,
-    model: ModelAdapter
-  ): Promise<string> {
-    const conversationalPrompt = `${
-      this.prompt ? this.prompt + '\n\n' : ''
-    }The user asked: "${originalMessage}"
-
-I executed the following tools to fulfill their request:
-
-${rawResult}
-
-Please provide a natural, helpful, conversational response to the user based on these tool execution results. Format the information in a user-friendly way.`;
-
-    this.logger.debug('Generating conversational response from planner output');
-
-    try {
-      const conversationalResponse = await model.complete(conversationalPrompt);
-      this.logger.debug('Conversational response generated successfully');
-      return conversationalResponse;
-    } catch (error) {
-      this.logger.warn('Failed to generate conversational response, returning raw result', {
-        error: error instanceof Error ? error.message : String(error),
-      });
-      // Fallback to raw result if conversation generation fails
-      return rawResult;
     }
   }
 }
