@@ -4,6 +4,8 @@ import { ResponseProcessor } from './responseProcessor';
 import { getLogger } from './logger';
 import { Tool } from './types/Tool';
 import { RunOptions } from './types/RunOptions';
+import { withExecutionMonitoring } from './decorators/monitoring';
+import { withFallbackMonitoring, withPlannedMonitoring } from './decorators/fallbackMonitoring';
 
 /**
  * Context for execution requests
@@ -25,58 +27,64 @@ export class ExecutionEngine {
   private responseProcessor = new ResponseProcessor();
   private logger = getLogger();
 
+  // These properties will be set by the monitoring decorator
+  private _currentExecutionId?: string;
+  private _currentExecutionStartTime?: number;
+
   /**
    * Execute a request using the most appropriate method (native or planned)
    */
+  @withExecutionMonitoring
   async execute(context: ExecutionContext): Promise<string> {
-    const { message, tools, memoryContext, systemPrompt, model, options } = context;
-
-    // Try native execution first if adapter supports it
-    if (model.supportsNativeTools) {
+    // Clean logic - decorators handle all monitoring
+    if (context.model.supportsNativeTools) {
       try {
-        this.logger.debug('Attempting native tool execution');
-
-        // Build the full prompt with context
-        const fullPrompt = this._buildPrompt(message, memoryContext, systemPrompt);
-
-        this.logger.logPrompt(fullPrompt, {
-          userMessage: message,
-          toolCount: tools.length,
-          executionMode: 'native',
-        });
-
-        const executionResult = await model.executeWithTools(fullPrompt, tools);
-
-        this.logger.logModelResponse(executionResult.content, {
-          operation: 'native_execution',
-          toolCallCount: executionResult.toolCalls.length,
-          success: executionResult.success,
-        });
-
-        if (executionResult.success) {
-          this.logger.debug('Native execution successful');
-          return executionResult.content;
-        } else {
-          throw new Error(`Native execution failed: ${executionResult.errors?.join(', ')}`);
-        }
+        return await this._tryNativeExecution(context);
       } catch (nativeError) {
-        this.logger.debug('Native execution failed, falling back to planner', {
-          error: nativeError instanceof Error ? nativeError.message : String(nativeError),
-        });
-
         // Fallback to planner execution
-        return this._executePlanned(context);
+        return await this._executePlanned(context);
       }
     } else {
       // Use planner execution directly
-      this.logger.debug('Using planner execution (adapter does not support native tools)');
-      return this._executePlanned(context);
+      return await this._executePlanned(context);
+    }
+  }
+
+  /**
+   * Attempt native tool execution
+   */
+  @withFallbackMonitoring
+  private async _tryNativeExecution(context: ExecutionContext): Promise<string> {
+    const { message, tools, memoryContext, systemPrompt, model } = context;
+
+    // Build the full prompt with context
+    const fullPrompt = this._buildPrompt(message, memoryContext, systemPrompt);
+
+    this.logger.logPrompt(fullPrompt, {
+      userMessage: message,
+      toolCount: tools.length,
+      executionMode: 'native',
+    });
+
+    const executionResult = await model.executeWithTools(fullPrompt, tools);
+
+    this.logger.logModelResponse(executionResult.content, {
+      operation: 'native_execution',
+      toolCallCount: executionResult.toolCalls.length,
+      success: executionResult.success,
+    });
+
+    if (executionResult.success) {
+      return executionResult.content;
+    } else {
+      throw new Error(`Native execution failed: ${executionResult.errors?.join(', ')}`);
     }
   }
 
   /**
    * Execute using planned approach with conversational post-processing
    */
+  @withPlannedMonitoring
   private async _executePlanned(context: ExecutionContext): Promise<string> {
     const { message, tools, memoryContext, systemPrompt, model, options } = context;
 
