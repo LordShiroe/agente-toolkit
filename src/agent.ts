@@ -1,7 +1,9 @@
 import { ModelAdapter } from './adapters/base';
 import { MemoryManager, SlidingWindowMemoryManager, Memory } from './memory';
 import { ExecutionEngine, ExecutionContext } from './executionEngine';
-import { getLogger } from './logger';
+import { AgentLogger } from './interfaces/AgentLogger';
+import { createDefaultLogger } from './loggers/defaultLoggers';
+import { LoggerUtils } from './utils/loggerUtils';
 import { Tool, Serializable } from './types/Tool';
 import { RunOptions } from './types/RunOptions';
 import { TSchema } from '@sinclair/typebox';
@@ -10,11 +12,15 @@ export class Agent {
   private memoryManager: MemoryManager;
   private tools: Tool<any, any>[] = [];
   private prompt: string = '';
-  private executionEngine = new ExecutionEngine();
-  private logger = getLogger();
+  private executionEngine: ExecutionEngine;
+  private logger: AgentLogger;
+  private loggerUtils: LoggerUtils;
 
-  constructor(memoryManager?: MemoryManager) {
+  constructor(memoryManager?: MemoryManager, logger?: AgentLogger) {
     this.memoryManager = memoryManager || new SlidingWindowMemoryManager();
+    this.logger = logger || createDefaultLogger();
+    this.executionEngine = new ExecutionEngine(this.logger);
+    this.loggerUtils = new LoggerUtils(this.logger);
   }
 
   addTool<TParams extends TSchema, TResult extends Serializable = string>(
@@ -29,7 +35,7 @@ export class Agent {
       content: message,
       importance,
     });
-    this.logger.logMemoryOperation('add', { type, importance, contentLength: message.length });
+    this.loggerUtils.logMemoryOperation('add', { type, importance, contentLength: message.length });
   }
 
   getMemory(): Memory[] {
@@ -53,14 +59,14 @@ export class Agent {
   }
 
   async run(message: string, model: ModelAdapter, options: RunOptions = {}): Promise<string> {
-    this.logger.logRunStart({
+    this.loggerUtils.logRunStart({
       message: message.substring(0, 50) + '...',
       options,
     });
     this.remember(message, 'conversation', 0.8);
     const response = await this._executeDecisionCycle(message, model, options);
     this.remember(`Agent response: ${response}`, 'conversation', 0.6);
-    this.logger.logRunEnd();
+    this.loggerUtils.logRunEnd();
     return response;
   }
 

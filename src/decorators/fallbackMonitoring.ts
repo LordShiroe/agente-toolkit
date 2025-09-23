@@ -1,4 +1,4 @@
-import { getLogger } from '../logger';
+import { AgentLogger } from '../interfaces/AgentLogger';
 import { categorizeFallbackReason } from '../utils/executionClassification';
 
 /**
@@ -12,7 +12,13 @@ export function withFallbackMonitoring(
   const originalMethod = descriptor.value;
 
   descriptor.value = async function (this: any, ...args: any[]) {
-    const logger = getLogger();
+    const logger = this.logger as AgentLogger;
+    if (!logger) {
+      throw new Error(
+        'Instance must have a logger property to use withFallbackMonitoring decorator'
+      );
+    }
+
     const executionId = this._currentExecutionId;
 
     if (!executionId) {
@@ -65,7 +71,13 @@ export function withPlannedMonitoring(
   const originalMethod = descriptor.value;
 
   descriptor.value = async function (this: any, ...args: any[]) {
-    const logger = getLogger();
+    const logger = this.logger as AgentLogger;
+    if (!logger) {
+      throw new Error(
+        'Instance must have a logger property to use withPlannedMonitoring decorator'
+      );
+    }
+
     const executionId = this._currentExecutionId;
 
     if (!executionId) {

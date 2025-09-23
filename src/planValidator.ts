@@ -1,13 +1,18 @@
 import { Tool } from './types/Tool';
 import { ExecutionPlan } from './types/ExecutionPlan';
 import { ValidationResult } from './types/ValidationResult';
-import { getLogger } from './logger';
+import { AgentLogger } from './interfaces/AgentLogger';
+import { createDefaultLogger } from './loggers/defaultLoggers';
 import Ajv from 'ajv';
 import { TSchema } from '@sinclair/typebox';
 
 export class PlanValidator {
   private ajv = new Ajv();
-  private logger = getLogger();
+  private logger: AgentLogger;
+
+  constructor(logger?: AgentLogger) {
+    this.logger = logger || createDefaultLogger();
+  }
 
   /**
    * Validates the structure of an execution plan

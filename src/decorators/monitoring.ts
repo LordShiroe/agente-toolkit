@@ -1,4 +1,4 @@
-import { getLogger } from '../logger';
+import { AgentLogger } from '../interfaces/AgentLogger';
 import { assessComplexity, generateExecutionId } from '../utils/executionClassification';
 import { ExecutionContext } from '../executionEngine';
 
@@ -22,7 +22,14 @@ export function withExecutionMonitoring(
   const originalMethod = descriptor.value;
 
   descriptor.value = async function (this: any, ...args: any[]) {
-    const logger = getLogger();
+    // Get logger from the instance - assumes the instance has a `logger` property
+    const logger = this.logger as AgentLogger;
+    if (!logger) {
+      throw new Error(
+        'Instance must have a logger property to use withExecutionMonitoring decorator'
+      );
+    }
+
     const metrics = startMonitoring(args, logger);
 
     // Store execution ID for use by other decorators
@@ -47,7 +54,7 @@ export function withExecutionMonitoring(
 /**
  * Start monitoring and log execution start event
  */
-function startMonitoring(args: any[], logger: any): ExecutionMetrics {
+function startMonitoring(args: any[], logger: AgentLogger): ExecutionMetrics {
   // Extract execution context from first argument
   const context: ExecutionContext = args[0];
 
@@ -75,7 +82,7 @@ function startMonitoring(args: any[], logger: any): ExecutionMetrics {
 /**
  * Log successful execution completion
  */
-function logExecutionSuccess(metrics: ExecutionMetrics, result: string, logger: any): void {
+function logExecutionSuccess(metrics: ExecutionMetrics, result: string, logger: AgentLogger): void {
   const duration = Date.now() - metrics.startTime;
 
   logger.info('execution_complete', {
@@ -91,7 +98,7 @@ function logExecutionSuccess(metrics: ExecutionMetrics, result: string, logger: 
 /**
  * Log failed execution
  */
-function logExecutionFailure(metrics: ExecutionMetrics, error: Error, logger: any): void {
+function logExecutionFailure(metrics: ExecutionMetrics, error: Error, logger: AgentLogger): void {
   const duration = Date.now() - metrics.startTime;
 
   logger.error('execution_failed', {

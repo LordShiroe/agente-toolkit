@@ -1,5 +1,6 @@
 import { TSchema } from '@sinclair/typebox';
-import { getLogger } from './logger';
+import { AgentLogger } from './interfaces/AgentLogger';
+import { createDefaultLogger } from './loggers/defaultLoggers';
 
 export interface StepResultMetadata {
   resultSchema?: TSchema;
@@ -12,7 +13,11 @@ export interface ReferenceResolutionContext {
 }
 
 export class ReferenceResolver {
-  private logger = getLogger();
+  private logger: AgentLogger;
+
+  constructor(logger?: AgentLogger) {
+    this.logger = logger || createDefaultLogger();
+  }
 
   /**
    * Resolves template references in parameters using the execution context

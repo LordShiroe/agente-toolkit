@@ -1,6 +1,8 @@
 import { ModelAdapter } from './adapters/base';
 import { Tool } from './types/Tool';
-import { getLogger } from './logger';
+import { AgentLogger } from './interfaces/AgentLogger';
+import { createDefaultLogger } from './loggers/defaultLoggers';
+import { LoggerUtils } from './utils/loggerUtils';
 import { PlanStep } from './types/PlanStep';
 import { ExecutionPlan } from './types/ExecutionPlan';
 import { RunOptions } from './types/RunOptions';
@@ -9,9 +11,17 @@ import { ReferenceResolver, ReferenceResolutionContext } from './referenceResolv
 import { PlanValidator } from './planValidator';
 
 export class Planner {
-  private logger = getLogger();
-  private referenceResolver = new ReferenceResolver();
-  private planValidator = new PlanValidator();
+  private logger: AgentLogger;
+  private loggerUtils: LoggerUtils;
+  private referenceResolver: ReferenceResolver;
+  private planValidator: PlanValidator;
+
+  constructor(logger?: AgentLogger) {
+    this.logger = logger || createDefaultLogger();
+    this.loggerUtils = new LoggerUtils(this.logger);
+    this.referenceResolver = new ReferenceResolver(this.logger);
+    this.planValidator = new PlanValidator(this.logger);
+  }
 
   /**
    * Execute a request using traditional planning approach
@@ -31,7 +41,7 @@ export class Planner {
 
     const plan = await this.createPlan(message, tools, memoryContext, systemPrompt, model);
 
-    this.logger.logPlanCreation(message, tools, plan);
+    this.loggerUtils.logPlanCreation(message, tools, plan);
 
     return this.executePlan(plan, tools, options);
   }
@@ -83,9 +93,9 @@ Create an execution plan. Respond ONLY with a JSON array of steps:
 
 Use {{stepId}} in params to reference previous step results.`;
 
-    this.logger.logPrompt(planningPrompt, { userMessage: message, toolCount: tools.length });
+    this.loggerUtils.logPrompt(planningPrompt, { userMessage: message, toolCount: tools.length });
     const response = await model.complete(planningPrompt);
-    this.logger.logModelResponse(response, { operation: 'plan_creation' });
+    this.loggerUtils.logModelResponse(response, { operation: 'plan_creation' });
     try {
       const steps = JSON.parse(response.trim()) as PlanStep[];
       return {
@@ -134,7 +144,7 @@ Use {{stepId}} in params to reference previous step results.`;
         }
 
         const stepStart = Date.now();
-        this.logger.logStepStart(step.id, step.toolName);
+        this.loggerUtils.logStepStart(step.id, step.toolName);
         try {
           const tool = tools.find(t => t.name === step.toolName);
 
@@ -153,7 +163,7 @@ Use {{stepId}} in params to reference previous step results.`;
             context,
             tool.paramsSchema
           );
-          this.logger.logParameterResolution(step.id, step.params, processedParams);
+          this.loggerUtils.logParameterResolution(step.id, step.params, processedParams);
 
           // Validate params
           const validationResult = this.planValidator.validateParameters(
@@ -161,7 +171,7 @@ Use {{stepId}} in params to reference previous step results.`;
             tool.paramsSchema
           );
           if (!validationResult.isValid) {
-            this.logger.logValidationError(step.toolName, validationResult.errors);
+            this.loggerUtils.logValidationError(step.toolName, validationResult.errors);
             throw new Error(
               `Invalid params for tool '${step.toolName}': ${JSON.stringify(
                 validationResult.errors
@@ -175,8 +185,8 @@ Use {{stepId}} in params to reference previous step results.`;
           plan.context[step.id] = step.result;
 
           const duration = Date.now() - stepStart;
-          this.logger.logToolExecution(step.toolName, processedParams, step.result, duration);
-          this.logger.logStepEnd(step.id, step.toolName, duration);
+          this.loggerUtils.logToolExecution(step.toolName, processedParams, step.result, duration);
+          this.loggerUtils.logStepEnd(step.id, step.toolName, duration);
 
           // Properly serialize the result - if it's an object, stringify it
           const serializedResult =

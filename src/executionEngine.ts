@@ -1,7 +1,9 @@
 import { ModelAdapter } from './adapters/base';
 import { Planner } from './planner';
 import { ResponseProcessor } from './responseProcessor';
-import { getLogger } from './logger';
+import { AgentLogger } from './interfaces/AgentLogger';
+import { createDefaultLogger } from './loggers/defaultLoggers';
+import { LoggerUtils } from './utils/loggerUtils';
 import { Tool } from './types/Tool';
 import { RunOptions } from './types/RunOptions';
 import { withExecutionMonitoring } from './decorators/monitoring';
@@ -23,13 +25,20 @@ export interface ExecutionContext {
  * Handles execution decisions and orchestration between native and planned execution
  */
 export class ExecutionEngine {
-  private planner = new Planner();
+  private planner: Planner;
   private responseProcessor = new ResponseProcessor();
-  private logger = getLogger();
+  private logger: AgentLogger;
+  private loggerUtils: LoggerUtils;
 
   // These properties will be set by the monitoring decorator
   private _currentExecutionId?: string;
   private _currentExecutionStartTime?: number;
+
+  constructor(logger?: AgentLogger) {
+    this.logger = logger || createDefaultLogger();
+    this.loggerUtils = new LoggerUtils(this.logger);
+    this.planner = new Planner(this.logger);
+  }
 
   /**
    * Execute a request using the most appropriate method (native or planned)
@@ -60,7 +69,7 @@ export class ExecutionEngine {
     // Build the full prompt with context
     const fullPrompt = this._buildPrompt(message, memoryContext, systemPrompt);
 
-    this.logger.logPrompt(fullPrompt, {
+    this.loggerUtils.logPrompt(fullPrompt, {
       userMessage: message,
       toolCount: tools.length,
       executionMode: 'native',
@@ -68,7 +77,7 @@ export class ExecutionEngine {
 
     const executionResult = await model.executeWithTools(fullPrompt, tools);
 
-    this.logger.logModelResponse(executionResult.content, {
+    this.loggerUtils.logModelResponse(executionResult.content, {
       operation: 'native_execution',
       toolCallCount: executionResult.toolCalls.length,
       success: executionResult.success,

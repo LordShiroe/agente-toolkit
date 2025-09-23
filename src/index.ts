@@ -6,6 +6,10 @@ export type { ModelAdapter, ToolExecutionResult } from './adapters/base';
 // Enhanced planner with native tool support
 export { Planner } from './planner';
 
+// Injectable Logging System
+export type { AgentLogger } from './interfaces/AgentLogger';
+export { ConsoleLogger, SilentLogger, createDefaultLogger } from './loggers/defaultLoggers';
+
 // Agent Registry and Management
 export {
   registerAgent,
