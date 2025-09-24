@@ -1,14 +1,17 @@
-export { Agent } from './agent';
-export { SlidingWindowMemoryManager } from './memory';
-export { ClaudeAdapter } from './adapters/claudeAdapter';
-export type { ModelAdapter, ToolExecutionResult } from './adapters/base';
+// Core Domain Exports
+export { Agent } from './core/agent';
+export { SlidingWindowMemoryManager } from './core/memory';
+
+// Infrastructure Exports
+export { ClaudeAdapter } from './infrastructure/adapters';
+export type { ModelAdapter, ToolExecutionResult } from './infrastructure/adapters';
 
 // Enhanced planner with native tool support
-export { Planner } from './planner';
+export { Planner } from './core/execution';
 
 // Injectable Logging System
-export type { AgentLogger } from './interfaces/AgentLogger';
-export { ConsoleLogger, SilentLogger, createDefaultLogger } from './loggers/defaultLoggers';
+export type { AgentLogger } from './infrastructure/logging';
+export { ConsoleLogger, SilentLogger, createDefaultLogger } from './infrastructure/logging';
 
 // Agent Registry and Management
 export {
@@ -18,9 +21,9 @@ export {
   findAgentsByCategory,
   findAgentsByKeywords,
   clearRegistry,
-} from './agentRegistry';
-export type { AgentMetadata, AgentCapability, AgentRegistration } from './types/AgentMetadata';
+} from './core/agent';
+export type { AgentMetadata, AgentCapability, AgentRegistration } from './core/agent';
 
 // Optional: expose common tools and types for consumers
-export type { Tool } from './types/Tool';
-export type { RunOptions } from './types/RunOptions';
+export type { Tool } from './core/tools';
+export type { RunOptions } from './core/agent';
