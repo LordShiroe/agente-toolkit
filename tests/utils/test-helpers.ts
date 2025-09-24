@@ -6,7 +6,7 @@ import { mockClaudeResponse, mockClaudeToolResponse } from '../fixtures/claude-f
 export class MockModelAdapter implements ModelAdapter {
   name = 'mock-adapter';
   supportsNativeTools = true;
-  
+
   private responses: any[];
   private currentResponseIndex = 0;
   public callHistory: Array<{
@@ -24,7 +24,7 @@ export class MockModelAdapter implements ModelAdapter {
     // Record the call
     this.callHistory.push({
       prompt,
-      timestamp: new Date()
+      timestamp: new Date(),
     });
 
     const response = this.responses[this.currentResponseIndex] || this.responses[0];
@@ -54,7 +54,7 @@ export class MockModelAdapter implements ModelAdapter {
     this.callHistory.push({
       prompt,
       tools,
-      timestamp: new Date()
+      timestamp: new Date(),
     });
 
     const response = this.responses[this.currentResponseIndex] || this.responses[0];
@@ -74,10 +74,10 @@ export class MockModelAdapter implements ModelAdapter {
         {
           name: 'calculator',
           arguments: { expression: '15 + 27' },
-          result: 42
-        }
+          result: 42,
+        },
       ],
-      success: true
+      success: true,
     };
   }
 
@@ -113,12 +113,12 @@ export function delay(ms: number): Promise<void> {
 // Environment variable helpers
 export function withTestEnv<T>(envVars: Record<string, string>, fn: () => T): T {
   const originalEnv = { ...process.env };
-  
+
   // Set test environment variables
   Object.entries(envVars).forEach(([key, value]) => {
     process.env[key] = value;
   });
-  
+
   try {
     return fn();
   } finally {
@@ -149,7 +149,7 @@ export function captureConsole() {
       console.log = originalLog;
       console.error = originalError;
       console.warn = originalWarn;
-    }
+    },
   };
 }
 
@@ -172,6 +172,6 @@ export async function measurePerformance<T>(
     result: result!,
     avgTime: times.reduce((a, b) => a + b, 0) / times.length,
     minTime: Math.min(...times),
-    maxTime: Math.max(...times)
+    maxTime: Math.max(...times),
   };
 }

@@ -14,11 +14,11 @@ describe('SlidingWindowMemoryManager', () => {
       const memoryData = {
         content: 'Test memory content',
         type: 'conversation' as const,
-        importance: 0.8
+        importance: 0.8,
       };
 
       memoryManager.addMemory(memoryData);
-      
+
       const memories = memoryManager.getAllMemories();
       expect(memories).toHaveLength(1);
       expect(memories[0]).toMatchObject(memoryData);
@@ -32,31 +32,31 @@ describe('SlidingWindowMemoryManager', () => {
         memoryManager.addMemory({
           content: `Memory ${i}`,
           type: 'conversation',
-          importance: 0.5
+          importance: 0.5,
         });
       }
 
       const memories = memoryManager.getAllMemories();
       expect(memories).toHaveLength(5); // Should be limited to maxMemories
-      
+
       // Should keep 5 out of 7 memories based on retention score
       expect(memories.length).toBe(5);
     });
 
     it('should handle different memory types', () => {
       const memoryTypes: Memory['type'][] = ['conversation', 'fact', 'tool_result', 'system'];
-      
+
       memoryTypes.forEach(type => {
         memoryManager.addMemory({
           content: `Test ${type} memory`,
           type,
-          importance: 0.7
+          importance: 0.7,
         });
       });
 
       const memories = memoryManager.getAllMemories();
       expect(memories).toHaveLength(4);
-      
+
       memoryTypes.forEach(type => {
         const typeMemories = memoryManager.getMemoryByType(type);
         expect(typeMemories).toHaveLength(1);
@@ -72,7 +72,7 @@ describe('SlidingWindowMemoryManager', () => {
         memoryManager.addMemory({
           content: memory.content,
           type: memory.type,
-          importance: memory.importance
+          importance: memory.importance,
         });
       });
     });
@@ -80,10 +80,10 @@ describe('SlidingWindowMemoryManager', () => {
     it('should return memories relevant to context', () => {
       const context = 'weather Tokyo';
       const relevant = memoryManager.getRelevantMemories(context, 2);
-      
+
       expect(relevant.length).toBeGreaterThan(0);
       expect(relevant.length).toBeLessThanOrEqual(2);
-      
+
       // Should include the Tokyo weather memory
       const tokyoMemory = relevant.find(m => m.content.includes('Tokyo'));
       expect(tokyoMemory).toBeDefined();
@@ -96,7 +96,7 @@ describe('SlidingWindowMemoryManager', () => {
 
     it('should return fewer results for very low relevance queries', () => {
       const relevant = memoryManager.getRelevantMemories('xyzzzzwwwwqqqqrrrrttttuuuu', 5);
-      // The algorithm may still return some results due to importance scores, 
+      // The algorithm may still return some results due to importance scores,
       // but it should return fewer than max requested
       expect(relevant.length).toBeLessThanOrEqual(5);
     });
@@ -106,17 +106,17 @@ describe('SlidingWindowMemoryManager', () => {
       memoryManager.addMemory({
         content: 'Very important calculation result',
         type: 'tool_result',
-        importance: 0.9
+        importance: 0.9,
       });
-      
+
       memoryManager.addMemory({
         content: 'Less important calculation note',
         type: 'conversation',
-        importance: 0.3
+        importance: 0.3,
       });
 
       const relevant = memoryManager.getRelevantMemories('calculation', 10);
-      
+
       // Higher importance should come first when relevance is similar
       expect(relevant[0].importance).toBeGreaterThanOrEqual(relevant[1]?.importance || 0);
     });
@@ -128,7 +128,7 @@ describe('SlidingWindowMemoryManager', () => {
         memoryManager.addMemory({
           content: memory.content,
           type: memory.type,
-          importance: memory.importance
+          importance: memory.importance,
         });
       });
     });
@@ -136,7 +136,7 @@ describe('SlidingWindowMemoryManager', () => {
     it('should get memories by type', () => {
       const conversationMemories = memoryManager.getMemoryByType('conversation');
       const toolMemories = memoryManager.getMemoryByType('tool_result');
-      
+
       expect(conversationMemories.every(m => m.type === 'conversation')).toBe(true);
       expect(toolMemories.every(m => m.type === 'tool_result')).toBe(true);
     });
@@ -159,15 +159,15 @@ describe('SlidingWindowMemoryManager', () => {
         memoryManager.addMemory({
           content: `Memory ${i}`,
           type: 'conversation',
-          importance: i * 0.1 // 0.0 to 0.9
+          importance: i * 0.1, // 0.0 to 0.9
         });
       }
 
       memoryManager.pruneMemories();
-      
+
       const memories = memoryManager.getAllMemories();
       expect(memories).toHaveLength(5); // Should be pruned to limit
-      
+
       // Should keep higher importance memories
       memories.forEach(memory => {
         expect(memory.importance).toBeGreaterThanOrEqual(0.5);

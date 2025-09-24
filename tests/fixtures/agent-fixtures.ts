@@ -9,9 +9,9 @@ export const mockCalculatorTool: Tool<any, number> = {
   name: 'calculator',
   description: 'Performs basic arithmetic calculations',
   paramsSchema: Type.Object({
-    expression: Type.String({ description: 'Mathematical expression to evaluate' })
+    expression: Type.String({ description: 'Mathematical expression to evaluate' }),
   }),
-  action: async (params) => {
+  action: async params => {
     // Simple calculator for testing
     const expression = params.expression.replace(/[^0-9+\-*/().\s]/g, '');
     try {
@@ -19,7 +19,7 @@ export const mockCalculatorTool: Tool<any, number> = {
     } catch {
       throw new Error('Invalid mathematical expression');
     }
-  }
+  },
 };
 
 export const mockMemoryTool: Tool<any, string[]> = {
@@ -27,15 +27,15 @@ export const mockMemoryTool: Tool<any, string[]> = {
   description: 'Search through previous conversations and memories',
   paramsSchema: Type.Object({
     query: Type.String({ description: 'Search query for finding relevant memories' }),
-    maxResults: Type.Optional(Type.Number({ description: 'Maximum number of results to return' }))
+    maxResults: Type.Optional(Type.Number({ description: 'Maximum number of results to return' })),
   }),
-  action: async (params) => {
+  action: async params => {
     // Mock memory search results
     return [
       'Found: User asked about weather in Tokyo',
-      'Found: Successfully calculated 25 * 4 = 100'
+      'Found: Successfully calculated 25 * 4 = 100',
     ];
-  }
+  },
 };
 
 // Test agent registration
@@ -47,17 +47,13 @@ export const mockAgentRegistration: AgentRegistration = {
     categories: ['test', 'utility'],
     keywords: ['test', 'mock', 'utility'],
     priority: 1,
-    enabled: true
+    enabled: true,
   },
   capabilities: {
     taskTypes: ['calculation', 'memory', 'general'],
-    examples: [
-      'Calculate 15 + 27',
-      'Search for previous conversations',
-      'Help with basic tasks'
-    ],
-    limitations: ['Cannot access external APIs in test mode']
-  }
+    examples: ['Calculate 15 + 27', 'Search for previous conversations', 'Help with basic tasks'],
+    limitations: ['Cannot access external APIs in test mode'],
+  },
 };
 
 // Factory function to create test agents
@@ -68,15 +64,15 @@ export function createTestAgent(options?: {
 }): Agent {
   const memoryManager = new SlidingWindowMemoryManager(options?.memorySize || 10);
   const agent = new Agent(memoryManager);
-  
+
   if (options?.prompt) {
     agent.setPrompt(options.prompt);
   }
-  
+
   if (options?.tools) {
     options.tools.forEach(tool => agent.addTool(tool));
   }
-  
+
   return agent;
 }
 
@@ -85,5 +81,5 @@ export const testRunOptions = {
   maxSteps: 3,
   timeoutMs: 5000,
   temperature: 0.1,
-  maxTokens: 500
+  maxTokens: 500,
 };

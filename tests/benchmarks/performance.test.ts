@@ -4,7 +4,7 @@ import { SlidingWindowMemoryManager } from '../../src/core/memory/memory';
 import { MockModelAdapter } from '../utils/test-helpers';
 import { measurePerformance } from '../utils/test-helpers';
 import { mockCalculatorTool } from '../fixtures/agent-fixtures';
-
+// TODO: Actually do real benchmarks here
 describe('Performance Benchmarks', () => {
   let agent: Agent;
   let mockAdapter: MockModelAdapter;
@@ -14,8 +14,8 @@ describe('Performance Benchmarks', () => {
     agent = new Agent(memoryManager);
     mockAdapter = new MockModelAdapter([
       {
-        content: [{ type: 'text', text: 'Mock response for performance testing' }]
-      }
+        content: [{ type: 'text', text: 'Mock response for performance testing' }],
+      },
     ]);
   });
 
@@ -48,7 +48,7 @@ describe('Performance Benchmarks', () => {
       );
 
       console.log(`Memory Retrieval Performance: ${avgTime.toFixed(2)}ms average`);
-      
+
       // Memory operations should be fast
       expect(avgTime).toBeLessThan(50); // Should complete in under 50ms on average
     });
@@ -66,10 +66,10 @@ describe('Performance Benchmarks', () => {
             {
               type: 'tool_use',
               name: 'calculator',
-              input: { expression: '15 + 27' }
-            }
-          ]
-        }
+              input: { expression: '15 + 27' },
+            },
+          ],
+        },
       ]);
 
       const { avgTime, minTime, maxTime } = await measurePerformance(
@@ -100,7 +100,11 @@ describe('Performance Benchmarks', () => {
 
         // Populate with memories
         for (let i = 0; i < size; i++) {
-          testAgent.remember(`Memory content ${i} with some longer text to simulate real usage`, 'conversation', Math.random());
+          testAgent.remember(
+            `Memory content ${i} with some longer text to simulate real usage`,
+            'conversation',
+            Math.random()
+          );
         }
 
         const { avgTime } = await measurePerformance(
@@ -120,7 +124,7 @@ describe('Performance Benchmarks', () => {
       const smallestTime = results[0].time;
       const largestTime = results[results.length - 1].time;
       const scalingFactor = largestTime / smallestTime;
-      
+
       expect(scalingFactor).toBeLessThan(10); // Performance shouldn't degrade more than 10x
     });
   });
@@ -128,19 +132,18 @@ describe('Performance Benchmarks', () => {
   describe('Concurrent Agent Performance', () => {
     it('should handle multiple concurrent agent runs', async () => {
       const concurrentRuns = 3;
-      
-      const { avgTime } = await measurePerformance(
-        async () => {
-          const promises = Array(concurrentRuns).fill(null).map((_, i) => 
-            agent.run(`Concurrent message ${i}`, mockAdapter)
-          );
-          await Promise.all(promises);
-        },
-        2
+
+      const { avgTime } = await measurePerformance(async () => {
+        const promises = Array(concurrentRuns)
+          .fill(null)
+          .map((_, i) => agent.run(`Concurrent message ${i}`, mockAdapter));
+        await Promise.all(promises);
+      }, 2);
+
+      console.log(
+        `Concurrent Execution (${concurrentRuns} agents): ${avgTime.toFixed(2)}ms average`
       );
 
-      console.log(`Concurrent Execution (${concurrentRuns} agents): ${avgTime.toFixed(2)}ms average`);
-      
       // Concurrent execution should be reasonable
       expect(avgTime).toBeLessThan(3000); // Should complete in under 3 seconds
     });

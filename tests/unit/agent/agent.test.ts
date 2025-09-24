@@ -48,7 +48,7 @@ describe('Agent', () => {
     it('should get all memories', () => {
       agent.remember('Conversation memory', 'conversation', 0.7);
       agent.remember('Tool result memory', 'tool_result', 0.8);
-      
+
       const allMemories = agent.getMemory();
       expect(allMemories).toHaveLength(2);
       expect(allMemories.some(m => m.type === 'conversation')).toBe(true);
@@ -69,7 +69,7 @@ describe('Agent', () => {
     it('should execute and return response', async () => {
       const message = 'Hello, how are you?';
       const response = await agent.run(message, mockAdapter);
-      
+
       expect(response).toBeDefined();
       expect(typeof response).toBe('string');
       expect(mockAdapter.getCallCount()).toBeGreaterThan(0);
@@ -78,9 +78,9 @@ describe('Agent', () => {
     it('should store conversation in memory', async () => {
       const message = 'What is 15 + 27?';
       await agent.run(message, mockAdapter);
-      
+
       expect(agent.getMemoryCount()).toBeGreaterThan(0);
-      
+
       const memories = agent.getMemory();
       const userMessage = memories.find(m => m.content.includes(message));
       expect(userMessage).toBeDefined();
@@ -89,18 +89,20 @@ describe('Agent', () => {
     it('should respect run options', async () => {
       const message = 'Test message';
       const options = { ...testRunOptions };
-      
+
       const response = await agent.run(message, mockAdapter, options);
       expect(response).toBeDefined();
     });
 
     it('should handle errors gracefully', async () => {
-      const errorAdapter = new MockModelAdapter([{
-        error: { message: 'API Error' }
-      }]);
+      const errorAdapter = new MockModelAdapter([
+        {
+          error: { message: 'API Error' },
+        },
+      ]);
 
       const response = await agent.run('Test', errorAdapter);
-      
+
       // Agent should return an error message instead of throwing
       expect(response).toContain('Execution failed');
       expect(response).toContain('API Error');
@@ -113,15 +115,17 @@ describe('Agent', () => {
     });
 
     it('should execute tools when available', async () => {
-      const toolAdapter = new MockModelAdapter([{
-        content: [
-          {
-            type: 'tool_use',
-            name: 'calculator',
-            input: { expression: '15 + 27' }
-          }
-        ]
-      }]);
+      const toolAdapter = new MockModelAdapter([
+        {
+          content: [
+            {
+              type: 'tool_use',
+              name: 'calculator',
+              input: { expression: '15 + 27' },
+            },
+          ],
+        },
+      ]);
 
       const response = await agent.run('Calculate 15 + 27', toolAdapter);
       expect(response).toBeDefined();
@@ -132,7 +136,7 @@ describe('Agent', () => {
     it('should use custom prompt when set', () => {
       const customPrompt = 'You are a specialized math tutor.';
       agent.setPrompt(customPrompt);
-      
+
       expect(agent.getPrompt()).toBe(customPrompt);
     });
 
@@ -148,9 +152,9 @@ describe('Agent', () => {
       // Add some context to memory
       agent.remember('User prefers metric units', 'fact', 0.9);
       agent.remember('Previous conversation about temperature', 'conversation', 0.7);
-      
+
       const response = await agent.run('What about the weather?', mockAdapter);
-      
+
       // Should have added the new message to memory
       expect(agent.getMemoryCount()).toBeGreaterThan(2);
     });
@@ -159,10 +163,10 @@ describe('Agent', () => {
       await agent.run('Hello', mockAdapter);
       await agent.run('How are you?', mockAdapter);
       await agent.run('What can you do?', mockAdapter);
-      
+
       const memories = agent.getMemory();
       const conversationMemories = memories.filter(m => m.type === 'conversation');
-      
+
       expect(conversationMemories.length).toBeGreaterThan(0);
     });
   });

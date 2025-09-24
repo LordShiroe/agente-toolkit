@@ -13,8 +13,10 @@ describe('Agent Integration Tests', () => {
     agent = new Agent(memoryManager);
     mockAdapter = new MockModelAdapter([
       {
-        content: [{ type: 'text', text: 'Hello! I can help you with calculations and general questions.' }]
-      }
+        content: [
+          { type: 'text', text: 'Hello! I can help you with calculations and general questions.' },
+        ],
+      },
     ]);
   });
 
@@ -42,13 +44,13 @@ describe('Agent Integration Tests', () => {
 
     it('should maintain context across multiple tool uses', async () => {
       agent.addTool(mockCalculatorTool);
-      
+
       // Multiple calculations that could build on each other
       await agent.run('Calculate 15 + 27', mockAdapter);
       expect(agent.getMemoryCount()).toBeGreaterThan(0);
 
       await agent.run('Now multiply that result by 2', mockAdapter);
-      
+
       // Should have memory of both interactions
       const memories = agent.getMemory();
       expect(memories.some(m => m.content.includes('15 + 27'))).toBe(true);
@@ -65,7 +67,7 @@ describe('Agent Integration Tests', () => {
       // Test memory retrieval for temperature-related query
       const tempMemories = agent.getRelevantMemories('temperature weather', 2);
       expect(tempMemories.length).toBeGreaterThan(0);
-      
+
       // Test memory retrieval for calculation-related query
       const calcMemories = agent.getRelevantMemories('calculation math', 2);
       expect(calcMemories.length).toBeGreaterThan(0);
@@ -80,15 +82,17 @@ describe('Agent Integration Tests', () => {
     it('should successfully execute tool workflows', async () => {
       const toolAdapter = new MockModelAdapter([
         {
-          content: [{ type: 'text', text: 'I can calculate that for you using my calculator tool.' }]
-        }
+          content: [
+            { type: 'text', text: 'I can calculate that for you using my calculator tool.' },
+          ],
+        },
       ]);
 
       const response = await agent.run('What is 25 * 4?', toolAdapter);
-      
+
       expect(response).toBeDefined();
       expect(toolAdapter.getCallCount()).toBeGreaterThan(0);
-      
+
       // Verify the interaction was recorded in memory
       const memories = agent.getMemory();
       expect(memories.some(m => m.content.includes('25 * 4'))).toBe(true);
@@ -98,13 +102,13 @@ describe('Agent Integration Tests', () => {
   describe('Memory Persistence Through Sessions', () => {
     it('should accumulate and maintain memories across multiple runs', async () => {
       const initialMemoryCount = agent.getMemoryCount();
-      
+
       // Simulate a series of interactions
       const interactions = [
         'Hello, I need help with math',
-        'Calculate 10 + 5', 
+        'Calculate 10 + 5',
         'What about 20 - 8?',
-        'Thank you for the help'
+        'Thank you for the help',
       ];
 
       for (const message of interactions) {
@@ -113,7 +117,7 @@ describe('Agent Integration Tests', () => {
 
       const finalMemoryCount = agent.getMemoryCount();
       expect(finalMemoryCount).toBeGreaterThan(initialMemoryCount);
-      
+
       // Should have memories from all interactions
       const memories = agent.getMemory();
       interactions.forEach(interaction => {
