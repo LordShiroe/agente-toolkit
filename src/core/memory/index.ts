@@ -1,4 +1,5 @@
 // Core Memory Domain - Public Interface
-export { MemoryManager, SlidingWindowMemoryManager, Memory } from './memory';
+export { SlidingWindowMemoryManager } from './memory';
+export type { MemoryManager, Memory } from './memory';
 
 // Memory types are defined inline in memory.ts
