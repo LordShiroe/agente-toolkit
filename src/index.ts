@@ -3,7 +3,7 @@ export { Agent } from './core/agent';
 export { SlidingWindowMemoryManager } from './core/memory';
 
 // Infrastructure Exports
-export { ClaudeAdapter } from './infrastructure/adapters';
+export { ClaudeAdapter, OpenAIAdapter } from './infrastructure/adapters';
 export type { ModelAdapter, ToolExecutionResult } from './infrastructure/adapters';
 
 // Enhanced planner with native tool support

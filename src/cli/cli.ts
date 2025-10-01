@@ -1,5 +1,3 @@
-#!/usr/bin/env node
-
 import readline from 'readline';
 import { Command } from 'commander';
 import { Agent } from '../core/agent/Agent';
@@ -74,8 +72,11 @@ program.name('agente-toolkit').description('CLI for Agente Toolkit agent').versi
 program
   .command('chat')
   .description('Start a chat session with an AI agent')
-  .option('-k, --api-key <key>', 'Anthropic API key')
-  .option('-r, --provider <provider>', 'Model provider to use (claude|openai|ollama)', 'claude')
+  .option(
+    '-k, --api-key <key>',
+    'API key for the selected provider (or set ANTHROPIC_API_KEY/OPENAI_API_KEY env vars)'
+  )
+  .option('-r, --provider <provider>', 'Model provider to use (claude|openai)', 'claude')
   .option('-m, --model <model>', 'Preferred model to override adapter default')
   .option('--memory-size <size>', 'Maximum number of memories to keep', '30')
   .option('-v, --verbose', 'Enable verbose logging for debugging')
@@ -95,8 +96,21 @@ program
 
     const logger = getLogger();
 
-    if (!options.apiKey) {
-      console.error('❌ API key is required. Use -k or --api-key');
+    // Determine API key based on provider and options
+    let apiKey = options.apiKey;
+    if (!apiKey) {
+      if (options.provider === 'claude') {
+        apiKey = process.env.ANTHROPIC_API_KEY;
+      } else if (options.provider === 'openai') {
+        apiKey = process.env.OPENAI_API_KEY;
+      }
+    }
+
+    if (!apiKey) {
+      const envVar = options.provider === 'claude' ? 'ANTHROPIC_API_KEY' : 'OPENAI_API_KEY';
+      console.error(
+        `❌ API key is required. Use -k or --api-key, or set ${envVar} environment variable`
+      );
       process.exit(1);
     }
 
@@ -122,9 +136,14 @@ program
       let adapter: ModelAdapter;
       if (options.provider === 'claude') {
         const { ClaudeAdapter } = await import('../infrastructure/adapters/claude/claudeAdapter');
-        adapter = new ClaudeAdapter(options.apiKey, options.model);
+        adapter = new ClaudeAdapter(apiKey, options.model);
+      } else if (options.provider === 'openai') {
+        const { OpenAIAdapter } = await import('../infrastructure/adapters/openai/openaiAdapter');
+        adapter = new OpenAIAdapter(apiKey, options.model);
       } else {
-        console.error('❌ Provider not supported in this demo. Use --provider claude');
+        console.error(
+          `❌ Provider '${options.provider}' not supported. Use --provider claude or --provider openai`
+        );
         process.exit(1);
       }
 
