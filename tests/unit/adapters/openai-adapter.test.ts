@@ -1,11 +1,10 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { OpenAIAdapter } from '../../../src/infrastructure/adapters/openai/openaiAdapter';
 import { Type } from '@sinclair/typebox';
-import { 
-  mockOpenAIResponse, 
-  mockOpenAIToolResponse, 
+import {
+  mockOpenAIResponse,
+  mockOpenAIToolResponse,
   mockOpenAIFollowUpResponse,
-  mockOpenAIError 
 } from '../../fixtures/openai-fixtures';
 
 // Mock the OpenAI SDK
@@ -28,10 +27,10 @@ describe('OpenAIAdapter', () => {
   beforeEach(() => {
     // Clear all mocks
     vi.clearAllMocks();
-    
+
     // Create adapter instance
     adapter = new OpenAIAdapter('test-api-key', 'gpt-4o');
-    
+
     // Get the mocked create function
     mockCreate = (adapter as any).client.chat.completions.create;
   });
@@ -60,7 +59,9 @@ describe('OpenAIAdapter', () => {
     it('should handle empty responses', async () => {
       const emptyResponse = {
         ...mockOpenAIResponse,
-        choices: [{ ...mockOpenAIResponse.choices[0], message: { role: 'assistant', content: null } }],
+        choices: [
+          { ...mockOpenAIResponse.choices[0], message: { role: 'assistant', content: null } },
+        ],
       };
       mockCreate.mockResolvedValueOnce(emptyResponse);
 
@@ -97,7 +98,9 @@ describe('OpenAIAdapter', () => {
       const result = await adapter.executeWithTools('Calculate 20 + 22', [mockTool]);
 
       expect(result.success).toBe(true);
-      expect(result.content).toBe('The calculation result is 42. This demonstrates how the calculator tool works.');
+      expect(result.content).toBe(
+        'The calculation result is 42. This demonstrates how the calculator tool works.'
+      );
       expect(result.toolCalls).toHaveLength(1);
       expect(result.toolCalls[0]).toEqual({
         name: 'calculator',
@@ -128,20 +131,24 @@ describe('OpenAIAdapter', () => {
     it('should handle invalid JSON in tool arguments', async () => {
       const invalidJsonResponse = {
         ...mockOpenAIToolResponse,
-        choices: [{
-          ...mockOpenAIToolResponse.choices[0],
-          message: {
-            ...mockOpenAIToolResponse.choices[0].message,
-            tool_calls: [{
-              id: 'call_123',
-              type: 'function' as const,
-              function: {
-                name: 'calculator',
-                arguments: 'invalid json',
-              },
-            }],
+        choices: [
+          {
+            ...mockOpenAIToolResponse.choices[0],
+            message: {
+              ...mockOpenAIToolResponse.choices[0].message,
+              tool_calls: [
+                {
+                  id: 'call_123',
+                  type: 'function' as const,
+                  function: {
+                    name: 'calculator',
+                    arguments: 'invalid json',
+                  },
+                },
+              ],
+            },
           },
-        }],
+        ],
       };
 
       mockCreate.mockResolvedValueOnce(invalidJsonResponse);
@@ -165,13 +172,15 @@ describe('OpenAIAdapter', () => {
     it('should handle responses without tool calls', async () => {
       const noToolResponse = {
         ...mockOpenAIResponse,
-        choices: [{
-          ...mockOpenAIResponse.choices[0],
-          message: {
-            role: 'assistant' as const,
-            content: 'I cannot help with calculations.',
+        choices: [
+          {
+            ...mockOpenAIResponse.choices[0],
+            message: {
+              role: 'assistant' as const,
+              content: 'I cannot help with calculations.',
+            },
           },
-        }],
+        ],
       };
 
       mockCreate.mockResolvedValueOnce(noToolResponse);
