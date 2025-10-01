@@ -192,34 +192,4 @@ describe('OpenAIAdapter', () => {
       expect(result.toolCalls).toHaveLength(0);
     });
   });
-
-  describe('Schema Conversion', () => {
-    it('should convert object schemas correctly', () => {
-      const objectSchema = Type.Object({
-        name: Type.String(),
-        age: Type.Number(),
-        active: Type.Boolean(),
-      });
-
-      const convertedSchema = (adapter as any).convertSchemaToJsonSchema(objectSchema);
-
-      expect(convertedSchema.type).toBe('object');
-      expect(convertedSchema.properties).toBeDefined();
-      expect(convertedSchema.properties.name).toBeDefined();
-      expect(convertedSchema.properties.age).toBeDefined();
-      expect(convertedSchema.properties.active).toBeDefined();
-      expect(convertedSchema.required).toEqual(['name', 'age', 'active']);
-    });
-
-    it('should wrap non-object schemas in an object', () => {
-      const stringSchema = Type.String();
-
-      const convertedSchema = (adapter as any).convertSchemaToJsonSchema(stringSchema);
-
-      expect(convertedSchema.type).toBe('object');
-      expect(convertedSchema.properties).toBeDefined();
-      expect(convertedSchema.properties.value).toBeDefined();
-      expect(convertedSchema.required).toEqual(['value']);
-    });
-  });
 });

@@ -2,6 +2,7 @@ import OpenAI from 'openai';
 import { TSchema, Static } from '@sinclair/typebox';
 import { BaseAdapter, ToolExecutionResult } from '../base/base';
 import { Tool } from '../../../core/tools/types/Tool';
+import { SchemaUtils } from '../utils/schemaUtils';
 
 // Define OpenAI's tool format
 interface OpenAITool {
@@ -60,7 +61,7 @@ export class OpenAIAdapter extends BaseAdapter {
         function: {
           name: tool.name,
           description: tool.description,
-          parameters: this.convertSchemaToJsonSchema(tool.paramsSchema),
+          parameters: SchemaUtils.convertToJsonSchema(tool.paramsSchema),
         },
       }));
 
@@ -152,29 +153,5 @@ export class OpenAIAdapter extends BaseAdapter {
         errors: [error instanceof Error ? error.message : String(error)],
       };
     }
-  }
-
-  /**
-   * Convert TypeBox schema to JSON Schema format for OpenAI
-   */
-  private convertSchemaToJsonSchema(schema: TSchema): any {
-    const schemaObj = schema as any;
-
-    if (schemaObj.type === 'object') {
-      return {
-        type: 'object',
-        properties: schemaObj.properties || {},
-        required: schemaObj.required || [],
-      };
-    }
-
-    // For non-object schemas, wrap in an object
-    return {
-      type: 'object',
-      properties: {
-        value: schemaObj,
-      },
-      required: ['value'],
-    };
   }
 }

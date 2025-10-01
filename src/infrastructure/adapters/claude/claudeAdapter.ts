@@ -2,6 +2,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { TSchema, Static } from '@sinclair/typebox';
 import { BaseAdapter, ToolExecutionResult } from '../base/base';
 import { Tool } from '../../../core/tools/types/Tool';
+import { SchemaUtils } from '../utils/schemaUtils';
 
 // Define Anthropic's tool format
 interface AnthropicTool {
@@ -59,7 +60,7 @@ export class ClaudeAdapter extends BaseAdapter {
       const anthropicTools: AnthropicTool[] = tools.map(tool => ({
         name: tool.name,
         description: tool.description,
-        input_schema: this.convertSchemaToJsonSchema(tool.paramsSchema),
+        input_schema: SchemaUtils.convertToJsonSchema(tool.paramsSchema),
       }));
 
       const toolCalls: Array<{
@@ -115,30 +116,6 @@ export class ClaudeAdapter extends BaseAdapter {
         errors: [error instanceof Error ? error.message : String(error)],
       };
     }
-  }
-
-  /**
-   * Convert TypeBox schema to JSON Schema format for Anthropic
-   */
-  private convertSchemaToJsonSchema(schema: TSchema): any {
-    const schemaObj = schema as any;
-
-    if (schemaObj.type === 'object') {
-      return {
-        type: 'object',
-        properties: schemaObj.properties || {},
-        required: schemaObj.required || [],
-      };
-    }
-
-    // For non-object schemas, wrap in an object
-    return {
-      type: 'object',
-      properties: {
-        value: schemaObj,
-      },
-      required: ['value'],
-    };
   }
 
   /**
