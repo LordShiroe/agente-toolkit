@@ -73,7 +73,37 @@ export class OllamaAdapter extends BaseAdapter {
   /**
    * Text completion for general prompts
    */
-  async complete(prompt: string): Promise<string> {
+  async complete(
+    prompt: string,
+    options?: { json?: boolean; schema?: Record<string, any> }
+  ): Promise<string> {
+    // Prefer native structured outputs via chat endpoint when requesting JSON
+    if (options?.json || options?.schema) {
+      const chatBody: any = {
+        model: this.model,
+        messages: [{ role: 'user', content: prompt }],
+        stream: false,
+      };
+      if (options.schema) {
+        chatBody.format = options.schema; // JSON schema object
+      } else if (options.json) {
+        chatBody.format = 'json';
+      }
+      const chatResponse = await fetch(`${this.baseUrl}/api/chat`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(chatBody),
+      });
+      if (!chatResponse.ok) {
+        throw new Error(`Ollama API error: ${chatResponse.status} ${chatResponse.statusText}`);
+      }
+      const data = (await chatResponse.json()) as {
+        message?: { content?: string };
+      };
+      return data.message?.content || '';
+    }
+
+    // Fallback to simple generate for plain text
     const response = await fetch(`${this.baseUrl}/api/generate`, {
       method: 'POST',
       headers: {

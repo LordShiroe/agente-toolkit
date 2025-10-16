@@ -21,7 +21,7 @@ interface AnthropicTool {
  */
 export class ClaudeAdapter extends BaseAdapter {
   name = 'claude';
-  supportsNativeTools = true;
+  supportsNativeTools = false;
 
   private client: Anthropic;
   private model: string;
@@ -37,11 +37,40 @@ export class ClaudeAdapter extends BaseAdapter {
   /**
    * Text completion for general prompts
    */
-  async complete(prompt: string): Promise<string> {
+  async complete(
+    prompt: string,
+    options?: { json?: boolean; schema?: Record<string, any> }
+  ): Promise<string> {
+    const messages: Anthropic.Messages.MessageParam[] = [{ role: 'user', content: prompt }];
+
+    // Anthropic (as of mid-2025) does not have a stable json_schema response_format like OpenAI.
+    // Strategy:
+    // 1. If schema provided: prepend a system style instruction and ask for STRICT JSON matching schema.
+    // 2. If json flag: ask for a single JSON object only.
+    // We avoid over-constraining to reduce refusal likelihood.
+    if (options?.schema) {
+      messages.unshift({
+        role: 'user',
+        content:
+          'You are a structured output generator. Return ONLY a JSON object strictly validating against this JSON Schema. Do not include markdown fences.' +
+          `\nJSON Schema:\n${JSON.stringify(options.schema, null, 2)}\n` +
+          'If a field is optional and you lack information, omit it. Never add explanatory text.',
+      });
+    } else if (options?.json) {
+      // Detect if the prompt already demands a JSON array (e.g., Planner)
+      const wantsArray = /json\s+array/i.test(prompt) || /\[[\s\S]*\{/.test(prompt);
+      messages.unshift({
+        role: 'user',
+        content: wantsArray
+          ? 'Return ONLY a valid JSON array (no markdown, no explanation).'
+          : 'Return ONLY a valid JSON object (no markdown, no explanation). If you cannot comply, return an empty JSON object {}.',
+      });
+    }
+
     const message = await this.client.messages.create({
       model: this.model,
       max_tokens: 4096,
-      messages: [{ role: 'user', content: prompt }],
+      messages,
     });
 
     const textBlocks = message.content.filter(

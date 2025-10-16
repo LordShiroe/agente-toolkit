@@ -34,8 +34,13 @@ export interface ModelAdapter {
 
   /**
    * Text completion for general prompts and planning
+   * options.json -> request generic JSON object
+   * options.schema -> request JSON matching schema (provider support dependent)
    */
-  complete(prompt: string): Promise<string>;
+  complete(
+    prompt: string,
+    options?: { json?: boolean; schema?: Record<string, any> }
+  ): Promise<string>;
 
   /**
    * Execute tools with a prompt - adapter chooses best method (native vs planned)
@@ -50,6 +55,9 @@ export interface ModelAdapter {
 export abstract class BaseAdapter implements ModelAdapter {
   abstract name: string;
   abstract supportsNativeTools: boolean;
-  abstract complete(prompt: string): Promise<string>;
+  abstract complete(
+    prompt: string,
+    options?: { json?: boolean; schema?: Record<string, any> }
+  ): Promise<string>;
   abstract executeWithTools(prompt: string, tools: Tool[]): Promise<ToolExecutionResult>;
 }

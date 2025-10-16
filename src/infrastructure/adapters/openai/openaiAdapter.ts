@@ -38,16 +38,45 @@ export class OpenAIAdapter extends BaseAdapter {
   }
 
   /**
-   * Text completion for general prompts
+   * Text completion for general prompts.
+   * Supports structured JSON responses via OpenAI's response_format.
+   *
+   * options.json: boolean -> Request a JSON object (model validates JSON)
+   * options.schema: object -> Provide a JSON schema; will request JSON schema mode if supported
    */
-  async complete(prompt: string): Promise<string> {
-    const completion = await this.client.chat.completions.create({
-      model: this.model,
-      messages: [{ role: 'user', content: prompt }],
-      max_tokens: 4096,
-    });
+  async complete(
+    prompt: string,
+    options?: { json?: boolean; schema?: Record<string, any> }
+  ): Promise<string> {
+    const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
+      { role: 'user', content: prompt },
+    ];
 
-    return completion.choices[0]?.message?.content || '';
+    const requestParams: OpenAI.Chat.Completions.ChatCompletionCreateParams = {
+      model: this.model,
+      messages,
+      max_tokens: 4096,
+    } as any; // cast until types updated for experimental schema mode
+
+    // Structured output handling
+    if (options?.schema) {
+      // If a schema is provided, prefer json_schema response_format (GPT-4o family supports it)
+      (requestParams as any).response_format = {
+        type: 'json_schema',
+        json_schema: {
+          name: 'structured_response',
+          // Provide the schema as-is; callers must supply a valid JSON schema object
+          schema: options.schema,
+        },
+      };
+    } else if (options?.json) {
+      (requestParams as any).response_format = { type: 'json_object' };
+    }
+
+    const completion = (await this.client.chat.completions.create(
+      requestParams
+    )) as OpenAI.Chat.Completions.ChatCompletion; // ensure non-stream type
+    return completion.choices?.[0]?.message?.content || '';
   }
 
   /**

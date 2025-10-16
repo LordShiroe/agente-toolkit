@@ -75,6 +75,38 @@ describe('OpenAIAdapter', () => {
 
       await expect(adapter.complete('Hello')).rejects.toThrow('API Error');
     });
+
+    it('should request json_object response_format when json option used', async () => {
+      mockCreate.mockResolvedValueOnce(mockOpenAIResponse);
+
+      await adapter.complete('Return an object', { json: true });
+
+      expect(mockCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          response_format: { type: 'json_object' },
+        })
+      );
+    });
+
+    it('should request json_schema response_format when schema option used', async () => {
+      mockCreate.mockResolvedValueOnce(mockOpenAIResponse);
+      const schema = {
+        type: 'object',
+        properties: { name: { type: 'string' } },
+        required: ['name'],
+      };
+
+      await adapter.complete('Return an object', { schema });
+
+      expect(mockCreate).toHaveBeenCalledWith(
+        expect.objectContaining({
+          response_format: expect.objectContaining({
+            type: 'json_schema',
+            json_schema: expect.objectContaining({ schema }),
+          }),
+        })
+      );
+    });
   });
 
   describe('Tool Execution', () => {

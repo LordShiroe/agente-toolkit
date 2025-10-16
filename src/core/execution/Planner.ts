@@ -6,6 +6,7 @@ import { LoggerUtils } from '../../infrastructure/logging/utils/loggerUtils';
 import { PlanStep } from './types/PlanStep';
 import { ExecutionPlan } from './types/ExecutionPlan';
 import { RunOptions } from '../agent/types/RunOptions';
+import { parseJsonFromResponse } from '../../shared/utils/jsonParser';
 
 import { ReferenceResolver, ReferenceResolutionContext } from './ReferenceResolver';
 import { PlanValidator } from './PlanValidator';
@@ -94,15 +95,15 @@ Create an execution plan. Respond ONLY with a JSON array of steps:
 Use {{stepId}} in params to reference previous step results.`;
 
     this.loggerUtils.logPrompt(planningPrompt, { userMessage: message, toolCount: tools.length });
-    const response = await model.complete(planningPrompt);
+    const response = await model.complete(planningPrompt, { json: true });
     this.loggerUtils.logModelResponse(response, { operation: 'plan_creation' });
     try {
-      const steps = JSON.parse(response.trim()) as PlanStep[];
+      const steps = parseJsonFromResponse(response) as PlanStep[];
       return {
         steps: steps.map(step => ({ ...step, status: 'pending' as const })),
         context: {},
       };
-    } catch {
+    } catch (error) {
       throw new Error(`Failed to parse execution plan: ${response}`);
     }
   }
