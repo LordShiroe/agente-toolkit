@@ -6,7 +6,9 @@ vi.mock('@anthropic-ai/sdk', () => {
     default: vi.fn().mockImplementation(() => ({
       messages: {
         create: vi.fn().mockResolvedValue({
-          content: [{ type: 'text', text: '[{"id":"step1","toolName":"t","params":{},"dependsOn":[]}]' }],
+          content: [
+            { type: 'text', text: '[{"id":"step1","toolName":"t","params":{},"dependsOn":[]}]' },
+          ],
         }),
       },
     })),
