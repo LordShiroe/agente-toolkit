@@ -98,13 +98,55 @@ Use {{stepId}} in params to reference previous step results.`;
     const response = await model.complete(planningPrompt, { json: true });
     this.loggerUtils.logModelResponse(response, { operation: 'plan_creation' });
     try {
-      const steps = parseJsonFromResponse(response) as PlanStep[];
+      const parsed = parseJsonFromResponse(response);
+
+      // Normalize different valid shapes the model might return
+      // - Array of steps
+      // - Object with { steps: [...] }
+      // - Single step object
+      let stepsRaw: any[] = [];
+      if (Array.isArray(parsed)) {
+        stepsRaw = parsed;
+      } else if (parsed && Array.isArray((parsed as any).steps)) {
+        stepsRaw = (parsed as any).steps;
+      } else if (
+        parsed &&
+        typeof parsed === 'object' &&
+        (parsed as any).id &&
+        (parsed as any).toolName
+      ) {
+        stepsRaw = [parsed];
+      } else {
+        throw new Error('Unexpected plan format');
+      }
+
+      // Coerce and default fields to fit PlanStep interface
+      const steps: PlanStep[] = stepsRaw.map((s: any): PlanStep => {
+        const id = String(s.id ?? '').trim();
+        const toolName = String(s.toolName ?? '').trim();
+        const params = s.params ?? {};
+        const dependsOn = Array.isArray(s.dependsOn) ? s.dependsOn.map((d: any) => String(d)) : [];
+
+        if (!id || !toolName) {
+          throw new Error('Plan step missing required fields id/toolName');
+        }
+
+        return {
+          id,
+          toolName,
+          params,
+          dependsOn,
+          status: 'pending',
+        };
+      });
+
       return {
-        steps: steps.map(step => ({ ...step, status: 'pending' as const })),
+        steps,
         context: {},
       };
     } catch (error) {
-      throw new Error(`Failed to parse execution plan: ${response}`);
+      const message = error instanceof Error ? error.message : String(error);
+      throw new Error(`Failed to parse execution plan: ${message}\n${response}`);
     }
   }
 
