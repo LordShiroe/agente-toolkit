@@ -21,7 +21,7 @@ interface AnthropicTool {
  */
 export class ClaudeAdapter extends BaseAdapter {
   name = 'claude';
-  supportsNativeTools = false;
+  supportsNativeTools = true;
 
   private client: Anthropic;
   private model: string;

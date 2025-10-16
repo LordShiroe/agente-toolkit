@@ -58,9 +58,7 @@ describe('Planner plan parsing', () => {
 
   it('accepts an object with steps array', async () => {
     const wrapped = JSON.stringify({
-      steps: [
-        { id: 's1', toolName: 'multiply', params: { a: 4, b: 5 }, dependsOn: [] },
-      ],
+      steps: [{ id: 's1', toolName: 'multiply', params: { a: 4, b: 5 }, dependsOn: [] }],
     });
     const planner = new Planner();
     const adapter = new FakeAdapter(wrapped);
