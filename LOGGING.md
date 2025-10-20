@@ -1,13 +1,13 @@
 # Injectable Logging System
 
-The AI Agent library now supports injectable logging, giving you full control over where monitoring logs go.
+The agente-toolkit library supports injectable logging, giving you full control over where monitoring logs go.
 
 ## Quick Start
 
 ### Using the Default Console Logger
 
 ```typescript
-import { Agent, ClaudeAdapter } from '@agente-toolkit/core';
+import { Agent, ClaudeAdapter } from 'agente-toolkit';
 
 const agent = new Agent(); // Uses ConsoleLogger by default
 const model = new ClaudeAdapter(process.env.ANTHROPIC_API_KEY!);
@@ -18,7 +18,7 @@ await agent.run('Hello world', model);
 ### Using a Silent Logger (No Logging)
 
 ```typescript
-import { Agent, SilentLogger, ClaudeAdapter } from '@agente-toolkit/core';
+import { Agent, SilentLogger, ClaudeAdapter } from 'agente-toolkit';
 
 const silentLogger = new SilentLogger();
 const agent = new Agent(undefined, silentLogger); // No logs output
@@ -30,7 +30,7 @@ await agent.run('Hello world', model);
 ### Using a Custom Logger
 
 ```typescript
-import { Agent, AgentLogger, ClaudeAdapter } from '@agente-toolkit/core';
+import { Agent, AgentLogger, ClaudeAdapter } from 'agente-toolkit';
 
 // Implement your own logger
 class MyCustomLogger implements AgentLogger {
@@ -65,7 +65,7 @@ await agent.run('Hello world', model);
 
 ```typescript
 import winston from 'winston';
-import { AgentLogger } from '@agente-toolkit/core';
+import { AgentLogger } from 'agente-toolkit';
 
 class WinstonAgentLogger implements AgentLogger {
   private winston: winston.Logger;
@@ -104,7 +104,7 @@ class WinstonAgentLogger implements AgentLogger {
 
 ```typescript
 import pino from 'pino';
-import { AgentLogger } from '@agente-toolkit/core';
+import { AgentLogger } from 'agente-toolkit';
 
 class PinoAgentLogger implements AgentLogger {
   private pino: pino.Logger;

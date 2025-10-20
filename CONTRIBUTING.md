@@ -110,18 +110,41 @@ npm run lint
 agente-toolkit/
 ├── src/
 │   ├── core/           # Core agent, execution, and memory logic
-│   ├── infrastructure/ # Adapters (Claude, OpenAI, Ollama)
-│   ├── agents/         # Example agents (Calculator, Weather, Manager)
-│   ├── cli/            # CLI interface
+│   │   ├── agent/      # Agent base class and registry
+│   │   ├── execution/  # ExecutionEngine, Planner, ResponseProcessor
+│   │   ├── memory/     # Memory management system
+│   │   └── tools/      # Tool interfaces and AgentTool
+│   ├── infrastructure/ # Adapters, logging, and monitoring
+│   │   ├── adapters/   # Claude, OpenAI, Ollama adapters
+│   │   ├── logging/    # Injectable logging system
+│   │   └── monitoring/ # Performance tracking
+│   ├── agents/         # Core agents (ManagerAgent only)
+│   │   └── manager/    # ManagerAgent for orchestration
 │   └── shared/         # Shared utilities
+├── examples/
+│   ├── agents/         # Demo agents (CalculatorAgent, WeatherAgent)
+│   │   ├── CalculatorAgent.ts
+│   │   ├── WeatherAgent.ts
+│   │   └── index.ts
+│   └── README.md       # Example documentation
 ├── tests/
-│   ├── unit/           # Unit tests
-│   ├── integration/    # Integration tests
+│   ├── unit/           # Unit tests for individual components
+│   ├── integration/    # Integration tests for workflows
 │   ├── benchmarks/     # Performance tests
-│   └── fixtures/       # Test fixtures and mocks
-├── dist/               # Build output (generated)
-└── coverage/           # Test coverage reports (generated)
+│   ├── fixtures/       # Test fixtures and mocks
+│   └── utils/          # Test utilities
+├── dist/               # Build output (generated, not in git)
+├── coverage/           # Test coverage reports (generated)
+└── docs/               # Additional documentation (future)
 ```
+
+### Directory Guidelines
+
+- **src/core/**: Core library functionality, no external service dependencies
+- **src/infrastructure/**: External integrations (LLM APIs, logging, etc.)
+- **src/agents/**: Only production-ready core agents (currently just ManagerAgent)
+- **examples/**: Demo code for learning, not included in npm package
+- **tests/**: Comprehensive test coverage for all functionality
 
 ## 📋 Pull Request Process
 

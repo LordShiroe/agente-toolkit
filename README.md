@@ -1,5 +1,10 @@
 # agente-toolkit
 
+[![npm version](https://badge.fury.io/js/agente-toolkit.svg)](https://www.npmjs.com/package/agente-toolkit)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![TypeScript](https://img.shields.io/badge/TypeScript-4.9-blue.svg)](https://www.typescriptlang.org/)
+[![Node.js](https://img.shields.io/badge/node-%3E%3D18.0.0-brightgreen.svg)](https://nodejs.org/)
+
 A modern TypeScript library for building AI agents with **native tool calling** and intelligent orchestration patterns. Features both single-agent execution and intelligent manager agents that automatically discover and route to specialized agents.
 
 ## 🚀 Key Features
@@ -50,30 +55,139 @@ The `ManagerAgent` intelligently manages any registered agents with automatic di
 
 ```typescript
 import { ManagerAgent, registerAgent, ClaudeAdapter } from 'agente-toolkit';
-import { CalculatorAgent, WeatherAgent } from './examples/agents';
 
-// Register example agents with their metadata
+// For this example, you'll need to copy the example agents from the GitHub repository
+// See: https://github.com/LordShiroe/agente-toolkit/tree/main/examples/agents
+// import { CalculatorAgent, WeatherAgent } from './your-agents-directory';
+
+// For demonstration, let's create simple agents inline
+class CalculatorAgent extends Agent {
+  constructor() {
+    super();
+    this.addTool({
+      name: 'add',
+      description: 'Add two numbers',
+      paramsSchema: Type.Object({
+        a: Type.Number(),
+        b: Type.Number(),
+      }),
+      action: async params => (params.a + params.b).toString(),
+    });
+  }
+
+  static metadata = {
+    metadata: {
+      id: 'calculator',
+      name: 'Calculator Agent',
+      description: 'Performs arithmetic calculations',
+      categories: ['math'],
+      keywords: ['calculate', 'math', 'add'],
+      priority: 5,
+    },
+    capabilities: {
+      taskTypes: ['arithmetic'],
+      examples: ['What is 15 + 27?'],
+      limitations: [],
+    },
+  };
+}
+
+// Register agents with their metadata
 registerAgent('calculator', new CalculatorAgent(), CalculatorAgent.metadata);
-registerAgent('weather', new WeatherAgent(), WeatherAgent.metadata);
 
 // Create adapter with native tool support
 const adapter = new ClaudeAdapter(process.env.ANTHROPIC_API_KEY);
 
 // Create intelligent manager that routes based on keywords and capabilities
 const manager = new ManagerAgent(adapter);
-// Now handles: "Calculate 15+27" → Calculator, "Weather in NYC" → Weather
-// All with conversational responses!
+
+// The manager routes: "Calculate 15+27" → Calculator agent
+const result = await manager.run('Calculate 15 + 27', adapter);
+console.log(result); // "The result is 42"
 ```
 
-## 📦 Install
+> **Note:** Full example agents (Calculator, Weather) are available in the [GitHub repository](https://github.com/LordShiroe/agente-toolkit/tree/main/examples/agents) but not included in the npm package. Copy them to your project as needed.
 
-Clone and install dependencies:
+## 📦 Installation
+
+### From NPM (Recommended)
 
 ```bash
-git clone <repository-url>
+npm install agente-toolkit
+```
+
+Or using yarn:
+
+```bash
+yarn add agente-toolkit
+```
+
+Or using pnpm:
+
+```bash
+pnpm add agente-toolkit
+```
+
+### Requirements
+
+- **Node.js**: >= 18.0.0
+- **TypeScript**: >= 4.9.0 (for TypeScript projects)
+
+### From Source (Development)
+
+```bash
+git clone https://github.com/LordShiroe/agente-toolkit.git
 cd agente-toolkit
 npm install
 npm run build
+```
+
+## 🚀 Quick Start
+
+### 1. Set up your API key
+
+```bash
+export ANTHROPIC_API_KEY="your-api-key-here"
+# or for OpenAI
+export OPENAI_API_KEY="your-api-key-here"
+```
+
+### 2. Create your first agent
+
+```typescript
+import { Agent, ClaudeAdapter } from 'agente-toolkit';
+
+// Create agent
+const agent = new Agent();
+agent.setPrompt('You are a helpful assistant.');
+
+// Create adapter
+const adapter = new ClaudeAdapter(process.env.ANTHROPIC_API_KEY);
+
+// Run!
+const result = await agent.run('Hello! What can you help me with?', adapter);
+console.log(result);
+```
+
+### 3. Add custom tools
+
+```typescript
+import { Agent, ClaudeAdapter } from 'agente-toolkit';
+import { Type } from '@sinclair/typebox';
+
+const agent = new Agent();
+
+// Add a custom tool
+agent.addTool({
+  name: 'get_time',
+  description: 'Get the current time',
+  paramsSchema: Type.Object({}),
+  action: async () => new Date().toLocaleTimeString(),
+});
+
+const adapter = new ClaudeAdapter(process.env.ANTHROPIC_API_KEY);
+const result = await agent.run('What time is it?', adapter);
+console.log(result); // "The current time is 2:30:45 PM"
 ```
 
 ## Programmatic Usage
@@ -102,15 +216,45 @@ console.log(result); // Natural, conversational response
 ### Intelligent Manager Agent with Native Tools
 
 ```typescript
-import { ManagerAgent, registerAgent, ClaudeAdapter } from 'agente-toolkit';
-import { CalculatorAgent, WeatherAgent } from './examples/agents';
+import { ManagerAgent, registerAgent, ClaudeAdapter, Agent } from 'agente-toolkit';
+import { Type } from '@sinclair/typebox';
 
-// Register example agents with rich metadata
+// Create specialized agents
+class CalculatorAgent extends Agent {
+  constructor() {
+    super();
+    this.addTool({
+      name: 'add',
+      description: 'Add two numbers',
+      paramsSchema: Type.Object({
+        a: Type.Number({ description: 'First number' }),
+        b: Type.Number({ description: 'Second number' }),
+      }),
+      action: async params => (params.a + params.b).toString(),
+    });
+  }
+
+  static metadata = {
+    metadata: {
+      id: 'calculator',
+      name: 'Calculator Agent',
+      description: 'Performs arithmetic calculations',
+      categories: ['math'],
+      keywords: ['calculate', 'add', 'subtract', 'multiply', 'divide'],
+      priority: 5,
+    },
+    capabilities: {
+      taskTypes: ['arithmetic', 'calculations'],
+      examples: ['What is 15 + 27?', 'Calculate 144 divided by 12'],
+      limitations: ['Cannot handle complex mathematical functions'],
+    },
+  };
+}
+
+// Register agents with rich metadata
 const calc = new CalculatorAgent();
-const weather = new WeatherAgent();
 
 registerAgent('calculator', calc, CalculatorAgent.metadata);
-registerAgent('weather', weather, WeatherAgent.metadata);
 
 // Create adapter with native tool calling support
 const adapter = new ClaudeAdapter(process.env.ANTHROPIC_API_KEY);
@@ -120,12 +264,13 @@ const manager = new ManagerAgent(adapter);
 
 // The manager intelligently routes with natural responses:
 // "Calculate 15 + 27" → Calculator agent → "The result is 42"
-// "Weather in Tokyo" → Weather agent → "Current weather in Tokyo is 22°C with clear skies"
 // "What's 50 divided by 2?" → Calculator agent → "50 divided by 2 equals 25"
 
 const result = await manager.run('What is 25 * 4?', adapter);
 // Returns: "25 multiplied by 4 equals 100"
 ```
+
+> **Pro Tip:** Check out the [examples directory](https://github.com/LordShiroe/agente-toolkit/tree/main/examples) for complete Calculator and Weather agent implementations.
 
 ### Architecture Benefits
 
@@ -197,5 +342,28 @@ const manager = new ManagerAgent(new ClaudeAdapter(process.env.ANTHROPIC_API_KEY
 - **Automatic fallback** ensures reliability across different model capabilities
 - **Conversational responses** are generated for all execution paths
 - **ManagerAgent** automatically benefits from native tools for all registered agents
-- **Weather functions** call public APIs; ensure network access when using them
-- **Verbose logging** (`--verbose`) shows detailed execution flow including native vs planned paths
+- **Example agents** (Calculator, Weather) are available in the [GitHub repository](https://github.com/LordShiroe/agente-toolkit/tree/main/examples/agents) for reference
+- **API Keys**: Ensure you have valid API keys for your chosen provider (Claude, OpenAI, Ollama)
+
+## 📚 Documentation
+
+- [CHANGELOG](./CHANGELOG.md) - Version history and migration guides
+- [CONTRIBUTING](./CONTRIBUTING.md) - How to contribute to the project
+- [SECURITY](./SECURITY.md) - Security policy and vulnerability reporting
+- [LOGGING](./LOGGING.md) - Injectable logging system documentation
+- [Examples](./examples/README.md) - Example agents and usage patterns
+
+## 🤝 Contributing
+
+We welcome contributions! Please see our [Contributing Guide](./CONTRIBUTING.md) for details.
+
+## 📄 License
+
+This project is licensed under the MIT License - see the [LICENSE](./LICENSE) file for details.
+
+## 🔗 Links
+
+- [npm Package](https://www.npmjs.com/package/agente-toolkit)
+- [GitHub Repository](https://github.com/LordShiroe/agente-toolkit)
+- [Issue Tracker](https://github.com/LordShiroe/agente-toolkit/issues)
+- [Example Agents](https://github.com/LordShiroe/agente-toolkit/tree/main/examples/agents)
