@@ -49,15 +49,10 @@ The `ManagerAgent` intelligently manages any registered agents with automatic di
 ### Quick Example
 
 ```typescript
-import {
-  ManagerAgent,
-  CalculatorAgent,
-  WeatherAgent,
-  registerAgent,
-  ClaudeAdapter,
-} from 'agente-toolkit';
+import { ManagerAgent, registerAgent, ClaudeAdapter } from 'agente-toolkit';
+import { CalculatorAgent, WeatherAgent } from './examples/agents';
 
-// Register agents with their metadata
+// Register example agents with their metadata
 registerAgent('calculator', new CalculatorAgent(), CalculatorAgent.metadata);
 registerAgent('weather', new WeatherAgent(), WeatherAgent.metadata);
 
@@ -107,15 +102,10 @@ console.log(result); // Natural, conversational response
 ### Intelligent Manager Agent with Native Tools
 
 ```typescript
-import {
-  ManagerAgent,
-  CalculatorAgent,
-  WeatherAgent,
-  registerAgent,
-  ClaudeAdapter,
-} from 'agente-toolkit';
+import { ManagerAgent, registerAgent, ClaudeAdapter } from 'agente-toolkit';
+import { CalculatorAgent, WeatherAgent } from './examples/agents';
 
-// Register agents with rich metadata
+// Register example agents with rich metadata
 const calc = new CalculatorAgent();
 const weather = new WeatherAgent();
 

@@ -1,4 +1,2 @@
-// Agent Implementations - Public Interface
-export { CalculatorAgent } from './calculator/CalculatorAgent';
+// Core Agent Implementations
 export { ManagerAgent } from './manager/ManagerAgent';
-export { WeatherAgent } from './weather/WeatherAgent';

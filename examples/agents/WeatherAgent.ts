@@ -1,9 +1,9 @@
 import fetch from 'node-fetch';
-import { Agent } from '../../core/agent/Agent';
-import { Tool } from '../../core/tools/types/Tool';
-import { MemoryManager } from '../../core/memory/memory';
+import { Agent } from '../../src/core/agent/Agent';
+import { Tool } from '../../src/core/tools/types/Tool';
+import { MemoryManager } from '../../src/core/memory/memory';
 import { Type } from '@sinclair/typebox';
-import { AgentRegistration } from '../../core/agent/types/AgentMetadata';
+import { AgentRegistration } from '../../src/core/agent/types/AgentMetadata';
 
 export class WeatherAgent extends Agent {
   static readonly metadata: AgentRegistration = {
