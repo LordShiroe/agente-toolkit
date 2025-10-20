@@ -81,36 +81,7 @@ npm install
 npm run build
 ```
 
-## 🚀 CLI Quickstart
-
-Start the interactive chat and select an agent from the menu. Supply your Anthropic API key.
-
-### Available Flags:
-
-- `--mode single|manager` (default: `single`) - Choose between single agent or intelligent manager
-- `--max-steps <n>` - Safety ceiling for execution steps
-- `--timeout-ms <ms>` - Safety ceiling for execution duration
-- `--stop-on-error` - Stop on first tool failure
-- `--model <name>` - Override Claude model (default: claude-sonnet-4)
-- `--verbose` - Enable detailed logging
-
-### Examples:
-
-**Single Agent Mode** (Calculator or Weather with native tool calling):
-
-```bash
-npm run build
-node dist/cli.js chat -k $ANTHROPIC_API_KEY --mode single --max-steps 8 --verbose
-```
-
-**Manager Agent Mode** (Intelligent delegation with native tool optimization):
-
-```bash
-npm run build
-node dist/cli.js chat -k $ANTHROPIC_API_KEY --mode manager --max-steps 12 --verbose
-```
-
-## 💻 Programmatic Usage
+## Programmatic Usage
 
 ### Basic Agent with Native Tool Support
 
