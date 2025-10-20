@@ -1,7 +1,29 @@
 {
-  "name": "ai-noob",
-  "version": "1.0.0",
-  "description": "",
+  "name": "agente-toolkit",
+  "version": "0.1.0",
+  "description": "A barebones TypeScript library for building AI agents with intelligent tool execution and self-correction capabilities",
+  "keywords": [
+    "ai",
+    "agents",
+    "llm",
+    "anthropic",
+    "claude",
+    "openai",
+    "ollama",
+    "tool-calling",
+    "typescript",
+    "ai-toolkit"
+  ],
+  "author": "Carlos Angarita",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/LordShiroe/agente-toolkit.git"
+  },
+  "bugs": {
+    "url": "https://github.com/LordShiroe/agente-toolkit/issues"
+  },
+  "homepage": "https://github.com/LordShiroe/agente-toolkit#readme",
   "type": "module",
   "main": "dist/cjs/index.js",
   "module": "dist/esm/index.js",
@@ -35,9 +57,6 @@
     "lint": "eslint \"src/**/*.{ts,js}\" --ext .ts,.js",
     "prepare": "husky install"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
   "dependencies": {
     "@anthropic-ai/sdk": "^0.62.0",
     "@sinclair/typebox": "^0.25.24",

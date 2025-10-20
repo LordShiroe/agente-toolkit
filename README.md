@@ -49,7 +49,13 @@ The `ManagerAgent` intelligently manages any registered agents with automatic di
 ### Quick Example
 
 ```typescript
-import { ManagerAgent, CalculatorAgent, WeatherAgent, registerAgent, ClaudeAdapter } from 'ai-noob';
+import {
+  ManagerAgent,
+  CalculatorAgent,
+  WeatherAgent,
+  registerAgent,
+  ClaudeAdapter,
+} from 'agente-toolkit';
 
 // Register agents with their metadata
 registerAgent('calculator', new CalculatorAgent(), CalculatorAgent.metadata);
@@ -109,7 +115,7 @@ node dist/cli.js chat -k $ANTHROPIC_API_KEY --mode manager --max-steps 12 --verb
 ### Basic Agent with Native Tool Support
 
 ```typescript
-import { Agent, ClaudeAdapter } from 'ai-noob';
+import { Agent, ClaudeAdapter } from 'agente-toolkit';
 
 // Create agent with native tool calling support
 const agent = new Agent();
@@ -130,7 +136,13 @@ console.log(result); // Natural, conversational response
 ### Intelligent Manager Agent with Native Tools
 
 ```typescript
-import { ManagerAgent, CalculatorAgent, WeatherAgent, registerAgent, ClaudeAdapter } from 'ai-noob';
+import {
+  ManagerAgent,
+  CalculatorAgent,
+  WeatherAgent,
+  registerAgent,
+  ClaudeAdapter,
+} from 'agente-toolkit';
 
 // Register agents with rich metadata
 const calc = new CalculatorAgent();
@@ -171,7 +183,7 @@ const result2 = await agent.run('Weather in Paris', basicAdapter);
 ### Custom Agent with Modern Architecture
 
 ```typescript
-import { Agent, AgentRegistration, ClaudeAdapter } from 'ai-noob';
+import { Agent, AgentRegistration, ClaudeAdapter } from 'agente-toolkit';
 
 class CustomAgent extends Agent {
   static readonly metadata: AgentRegistration = {
