@@ -347,11 +347,13 @@ const manager = new ManagerAgent(new ClaudeAdapter(process.env.ANTHROPIC_API_KEY
 
 ## 📚 Documentation
 
-- [CHANGELOG](./CHANGELOG.md) - Version history and migration guides
-- [CONTRIBUTING](./CONTRIBUTING.md) - How to contribute to the project
-- [SECURITY](./SECURITY.md) - Security policy and vulnerability reporting
-- [LOGGING](./LOGGING.md) - Injectable logging system documentation
-- [Examples](./examples/README.md) - Example agents and usage patterns
+See the docs for guides and references:
+
+- Getting Started: [Installation](./docs/getting-started/installation.md) · [Quick Start](./docs/getting-started/quick-start.md) · [Configuration](./docs/getting-started/configuration.md)
+- Guides: [Building Agents](./docs/guides/building-agents.md) · [Tool Development](./docs/guides/tool-development.md)
+- Providers: [Claude](./docs/adapters/claude.md) · [OpenAI](./docs/adapters/openai.md) · [Ollama](./docs/adapters/ollama.md)
+
+Reference: [CHANGELOG](./CHANGELOG.md) · [CONTRIBUTING](./CONTRIBUTING.md) · [SECURITY](./SECURITY.md) · [LOGGING](./LOGGING.md) · [Examples](./examples/README.md)
 
 ## 🤝 Contributing
 
