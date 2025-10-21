@@ -1,6 +1,6 @@
 {
   "name": "agente-toolkit",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "A barebones TypeScript library for building AI agents with intelligent tool execution and self-correction capabilities",
   "keywords": [
     "ai",

@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.2.0] - 2025-10-20
+
 ### Added
 
 - **CHANGELOG.md**: Now tracking all changes with proper semantic versioning
@@ -167,24 +169,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - OpenAI adapter native tools support not yet implemented (falls back to planning)
 - Ollama adapter native tools support not yet implemented (falls back to planning)
 - Memory system does not persist across sessions
-
----
-
-## [Planned for v0.2.0]
-
-### Documentation (In Progress)
-
-- Getting Started guides
-- Adapter-specific documentation (Claude, OpenAI, Ollama)
-- API reference documentation
-- Troubleshooting guide
-- Performance guide
-- Migration guides for breaking changes
-
-### Breaking Changes (Planned)
-
-- CLI removal will be finalized
-- Example agents API changes will be complete
 
 ---
 
