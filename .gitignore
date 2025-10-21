@@ -60,9 +60,9 @@ coverage/coverage.json
 # Logs from npm
 .npm
 
-# Dist artifacts from tsc
-**/*.js
-**/*.d.ts
-**/*.map
+# Dist artifacts from tsc (only in dist directory)
+dist/**/*.js
+dist/**/*.d.ts
+dist/**/*.map
 
-# Keep source maps for debugging sometimes; if you prefer to keep them remove the map entries above
+# Keep source configuration files like rollup.config.js, jest.config.js, etc.
