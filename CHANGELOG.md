@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Retrieval-Augmented Generation (RAG) System**: Complete modular RAG implementation
+  - Core interfaces: `Embedder`, `VectorStore`, `Retriever`, `PromptComposer`
+  - Default implementations: `NoOpEmbedder` (auto-selects Transformers.js or hash-based fallback), `InMemoryVectorStore`, `VectorStoreRetriever`, `DefaultPromptComposer`
+  - `SourceRegistry` for managing retrieval sources by ID
+  - `RetrievalAugmentor` for injecting retrieved context into prompts
+  - Optional per-agent retrieval configuration via `AgentRegistration.retrieval`
+  - LLM-agnostic design works with Claude, OpenAI, Ollama, or any adapter
+  - Local embeddings via Transformers.js (@xenova/transformers) with automatic fallback for testing
+  - Comprehensive test coverage (31 new tests)
+  - Full documentation: `docs/guides/rag-integration.md` and `examples/rag-example.md`
+
 ## [0.2.0] - 2025-10-20
 
 ### Added
