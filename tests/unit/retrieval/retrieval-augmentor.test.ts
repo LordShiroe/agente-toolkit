@@ -17,7 +17,7 @@ describe('RetrievalAugmentor', () => {
     // Setup vector store with test documents using real embedder
     const embedder = new NoOpEmbedder();
     vectorStore = new InMemoryVectorStore(embedder);
-    
+
     const documents: Document[] = [
       {
         id: '1',
@@ -168,7 +168,8 @@ describe('RetrievalAugmentor', () => {
 
       // Should have results from sources
       expect(result).toContain('Retrieved context');
-    });    it('should return original message when no sources configured', async () => {
+    });
+    it('should return original message when no sources configured', async () => {
       const config: RetrievalConfig = {
         sources: [],
         maxDocuments: 2,

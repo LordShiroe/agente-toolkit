@@ -52,16 +52,25 @@ class TransformersEmbedder implements Embedder {
 
   constructor(
     model = 'Xenova/all-MiniLM-L6-v2',
-    options?: { cacheDir?: string; quantized?: boolean }
+    options?: { cacheDir?: string; quantized?: boolean; forceWasm?: boolean }
   ) {
     this.model = model;
 
     this.ready = this.initPipeline(options);
   }
 
-  private async initPipeline(options?: { cacheDir?: string; quantized?: boolean }) {
+  private async initPipeline(options?: {
+    cacheDir?: string;
+    quantized?: boolean;
+    forceWasm?: boolean;
+  }) {
     try {
       const { pipeline, env } = await import('@xenova/transformers');
+
+      // Force WASM backend if requested, or use it by default to avoid binding issues
+      if (options?.forceWasm !== false) {
+        env.backends.onnx.wasm.numThreads = 1;
+      }
 
       if (options?.cacheDir) {
         env.localModelPath = options.cacheDir;
@@ -120,7 +129,7 @@ export class NoOpEmbedder implements Embedder {
 
   constructor(
     model = 'Xenova/all-MiniLM-L6-v2',
-    options?: { cacheDir?: string; quantized?: boolean; useSimple?: boolean }
+    options?: { cacheDir?: string; quantized?: boolean; useSimple?: boolean; forceWasm?: boolean }
   ) {
     // Start with simple embedder
     this.delegate = new SimpleHashEmbedder(384);
@@ -135,7 +144,7 @@ export class NoOpEmbedder implements Embedder {
 
   private async tryLoadTransformers(
     model: string,
-    options?: { cacheDir?: string; quantized?: boolean }
+    options?: { cacheDir?: string; quantized?: boolean; forceWasm?: boolean }
   ) {
     try {
       this.delegate = new TransformersEmbedder(model, options);
