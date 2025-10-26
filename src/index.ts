@@ -40,7 +40,8 @@ export type {
   SourceConfig,
 } from './core/retrieval';
 export {
-  NoOpEmbedder,
+  LocalEmbedder,
+  TransformersEmbedder,
   InMemoryVectorStore,
   VectorStoreRetriever,
   DefaultPromptComposer,

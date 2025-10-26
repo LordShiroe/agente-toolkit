@@ -3,7 +3,7 @@ import { RetrievalAugmentor } from '../../../src/core/retrieval/RetrievalAugment
 import { SourceRegistry } from '../../../src/core/retrieval/SourceRegistry';
 import { VectorStoreRetriever } from '../../../src/core/retrieval/implementations/VectorStoreRetriever';
 import { InMemoryVectorStore } from '../../../src/core/retrieval/implementations/InMemoryVectorStore';
-import { NoOpEmbedder } from '../../../src/core/retrieval/implementations/NoOpEmbedder';
+import { LocalEmbedder } from '../../../src/core/retrieval/implementations/LocalEmbedder';
 import { DefaultPromptComposer } from '../../../src/core/retrieval/implementations/DefaultPromptComposer';
 import { Document } from '../../../src/core/retrieval/types/Document';
 import { RetrievalConfig, SourceConfig } from '../../../src/core/retrieval/types/RetrievalConfig';
@@ -15,7 +15,7 @@ describe('RetrievalAugmentor', () => {
 
   beforeEach(async () => {
     // Setup vector store with test documents using real embedder
-    const embedder = new NoOpEmbedder();
+    const embedder = new LocalEmbedder();
     vectorStore = new InMemoryVectorStore(embedder);
 
     const documents: Document[] = [
@@ -139,7 +139,7 @@ describe('RetrievalAugmentor', () => {
 
     it('should handle multiple sources', async () => {
       // Add another source with real embedder
-      const embedder2 = new NoOpEmbedder();
+      const embedder2 = new LocalEmbedder();
       const vectorStore2 = new InMemoryVectorStore(embedder2);
 
       await vectorStore2.upsert([

@@ -35,7 +35,7 @@ The AiNoob toolkit includes a modular RAG system that allows agents to augment t
 
 ### Provided Implementations
 
-- **`NoOpEmbedder`**: Auto-selecting local embedder (tries Transformers.js, falls back to hash-based for tests)
+- **`LocalEmbedder`**: Local embedder using Transformers.js with WASM backend (works everywhere without native bindings)
 - **`InMemoryVectorStore`**: Simple cosine-similarity store (not for production scale)
 - **`VectorStoreRetriever`**: Wraps a VectorStore
 - **`DefaultPromptComposer`**: Formats documents into a "Retrieved context" section
@@ -191,7 +191,7 @@ class HybridRetriever implements Retriever {
 
 ## Best Practices
 
-1. **Use real embedders in production**: `NoOpEmbedder` uses a simple hash-based fallback for testing; upgrade to Transformers.js (already included) or use API-based embedders (OpenAI, Cohere) for better quality.
+1. **Use real embedders in production**: `LocalEmbedder` uses Transformers.js locally (free, no API keys), but for production at scale consider API-based embedders (OpenAI, Cohere, Voyage) for better quality and performance.
 2. **Choose appropriate vector stores**: `InMemoryVectorStore` is fine for small datasets; use pgvector, Qdrant, Chroma, etc. for scale.
 3. **Configure per-agent sources**: Different agents should retrieve from different knowledge bases (support vs sales vs engineering).
 4. **Set sensible `topK` and `minScore`**: Balance context size with relevance.

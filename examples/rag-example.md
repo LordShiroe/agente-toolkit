@@ -7,7 +7,7 @@ This example demonstrates how to configure and use the RAG system to augment age
 ```typescript
 import {
   Agent,
-  NoOpEmbedder,
+  LocalEmbedder,
   InMemoryVectorStore,
   VectorStoreRetriever,
   SourceRegistry,
@@ -16,8 +16,8 @@ import {
 } from 'agente-toolkit';
 import type { Document, SourceConfig, RetrievalConfig } from 'agente-toolkit';
 
-// 1. Create an embedder (NoOpEmbedder auto-selects best available: Transformers.js or hash-based fallback)
-const embedder = new NoOpEmbedder();
+// 1. Create an embedder (LocalEmbedder uses Transformers.js locally - no API keys needed)
+const embedder = new LocalEmbedder();
 
 // 2. Create a vector store and populate it with documents
 const vectorStore = new InMemoryVectorStore(embedder);
@@ -172,7 +172,7 @@ registerAgent('sales', salesAgent, {
 
 ## Using with Real Embeddings
 
-For production use, replace `NoOpEmbedder` with a real embedding service:
+For production use, replace `LocalEmbedder` with a real embedding service:
 
 ```typescript
 import OpenAI from 'openai';
@@ -209,7 +209,7 @@ const vectorStore = new InMemoryVectorStore(realEmbedder);
 
 ## Notes
 
-- The `NoOpEmbedder` automatically uses Transformers.js for real semantic embeddings when available, or falls back to a hash-based embedder for testing. For production, consider using API-based embedders (OpenAI, Cohere) for higher quality.
+- The `LocalEmbedder` uses Transformers.js for real semantic embeddings running completely locally. For production at scale, consider using API-based embedders (OpenAI, Cohere, Voyage) for higher quality and performance.
 - The `InMemoryVectorStore` is simple but not suitable for large datasets. Consider using pgvector, Qdrant, Chroma, or similar for production.
 - Retrieval is completely optional - agents work normally without it.
 - The system is LLM-agnostic - retrieval augmentation works with Claude, OpenAI, Ollama, or any other adapter.
