@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest';
 import { SourceRegistry } from '../../../src/core/retrieval/SourceRegistry';
 import { VectorStoreRetriever } from '../../../src/core/retrieval/implementations/VectorStoreRetriever';
 import { InMemoryVectorStore } from '../../../src/core/retrieval/implementations/InMemoryVectorStore';
-import { LocalEmbedder } from '../../../src/core/retrieval/implementations/LocalEmbedder';
+import { TransformersEmbedder } from '../../../src/core/retrieval/implementations/TransformersEmbedder';
 import { SourceConfig } from '../../../src/core/retrieval/types/RetrievalConfig';
 
 describe('SourceRegistry', () => {
@@ -12,7 +12,7 @@ describe('SourceRegistry', () => {
 
   beforeEach(() => {
     registry = new SourceRegistry();
-    const embedder = new LocalEmbedder();
+    const embedder = new TransformersEmbedder();
     const vectorStore = new InMemoryVectorStore(embedder);
     retriever = new VectorStoreRetriever(vectorStore);
 
@@ -35,7 +35,7 @@ describe('SourceRegistry', () => {
     });
 
     it('should overwrite existing source with same ID', () => {
-      const embedder2 = new LocalEmbedder();
+      const embedder2 = new TransformersEmbedder();
       const vectorStore2 = new InMemoryVectorStore(embedder2);
       const retriever2 = new VectorStoreRetriever(vectorStore2);
 

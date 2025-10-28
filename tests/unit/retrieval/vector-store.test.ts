@@ -1,14 +1,14 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { InMemoryVectorStore } from '../../../src/core/retrieval/implementations/InMemoryVectorStore';
-import { LocalEmbedder } from '../../../src/core/retrieval/implementations/LocalEmbedder';
+import { TransformersEmbedder } from '../../../src/core/retrieval/implementations/TransformersEmbedder';
 import type { Document } from '../../../src/core/retrieval/types/Document';
 
 describe('InMemoryVectorStore', () => {
   let store: InMemoryVectorStore;
-  let embedder: LocalEmbedder;
+  let embedder: TransformersEmbedder;
 
   beforeEach(() => {
-    embedder = new LocalEmbedder();
+    embedder = new TransformersEmbedder();
     store = new InMemoryVectorStore(embedder);
   });
 
