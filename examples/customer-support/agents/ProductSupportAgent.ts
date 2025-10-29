@@ -1,5 +1,6 @@
 import { Agent } from '../../../src/core/agent/Agent';
 import { globalSourceRegistry } from '../../../src/core/retrieval/SourceRegistry';
+import { AgentRegistration } from '../../../src/core/agent/types/AgentMetadata';
 
 /**
  * Product Support Agent
@@ -34,5 +35,38 @@ You have access to product documentation and FAQ database. Use them to provide a
       maxDocuments: 6,
       deduplicate: true,
     });
+  }
+
+  static getRegistration(): AgentRegistration {
+    return {
+      metadata: {
+        id: 'product-support',
+        name: 'ProductSupport',
+        description:
+          'Handles technical issues, setup, troubleshooting, device pairing, and product features for SmartHome Hub devices',
+        categories: ['support', 'technical'],
+        keywords: [
+          'technical',
+          'setup',
+          'troubleshooting',
+          'pairing',
+          'devices',
+          'features',
+          'wifi',
+          'connection',
+          'app',
+        ],
+      },
+      capabilities: {
+        taskTypes: ['technical-support', 'setup-assistance', 'troubleshooting'],
+        examples: [
+          "My device won't pair with the app",
+          'How do I set up my SmartHome Hub?',
+          'The device keeps disconnecting from WiFi',
+          'What features does the Premium plan include?',
+        ],
+        limitations: ['Cannot process returns or refunds', 'Cannot modify billing information'],
+      },
+    };
   }
 }

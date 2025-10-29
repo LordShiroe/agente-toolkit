@@ -3,7 +3,7 @@ import { setupGlobalSources } from './lib/sources';
 import { ProductSupportAgent } from './agents/ProductSupportAgent';
 import { BillingSupportAgent } from './agents/BillingSupportAgent';
 import { ReturnsAgent } from './agents/ReturnsAgent';
-import { ManagerAgent } from './agents/ManagerAgent';
+import { createCustomerSupportManager } from './agents/ManagerAgent';
 import { createOpenAIAdapter } from './lib/adapters';
 import { getOptions } from './lib/cli';
 
@@ -66,7 +66,7 @@ async function handleQuestion(
 
   if (agentType === 'auto') {
     // Use manager to auto-route
-    const manager = new ManagerAgent();
+    const manager = createCustomerSupportManager(adapter);
     answer = await manager.run(question, adapter);
   } else {
     // Route to specific agent

@@ -1,5 +1,6 @@
 import { Agent } from '../../../src/core/agent/Agent';
 import { globalSourceRegistry } from '../../../src/core/retrieval/SourceRegistry';
+import { AgentRegistration } from '../../../src/core/agent/types/AgentMetadata';
 
 /**
  * Returns Agent
@@ -35,5 +36,37 @@ You have access to returns policy documentation and FAQ database. Use them to pr
       maxDocuments: 4,
       deduplicate: true,
     });
+  }
+
+  static getRegistration(): AgentRegistration {
+    return {
+      metadata: {
+        id: 'returns-support',
+        name: 'ReturnsSupport',
+        description:
+          'Processes returns, refunds, exchanges, defective products, and warranty claims',
+        categories: ['support', 'returns'],
+        keywords: [
+          'return',
+          'refund',
+          'exchange',
+          'defective',
+          'damaged',
+          'warranty',
+          'broken',
+          'faulty',
+        ],
+      },
+      capabilities: {
+        taskTypes: ['returns-processing', 'refund-assistance', 'warranty-claims'],
+        examples: [
+          'I want to return my device',
+          'The product arrived damaged',
+          'How do I get a refund?',
+          'Is my device still under warranty?',
+        ],
+        limitations: ['Cannot provide technical support', 'Cannot modify billing information'],
+      },
+    };
   }
 }

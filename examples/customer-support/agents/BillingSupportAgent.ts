@@ -1,5 +1,6 @@
 import { Agent } from '../../../src/core/agent/Agent';
 import { globalSourceRegistry } from '../../../src/core/retrieval/SourceRegistry';
+import { AgentRegistration } from '../../../src/core/agent/types/AgentMetadata';
 
 /**
  * Billing Support Agent
@@ -34,5 +35,38 @@ You have access to billing knowledge base and FAQ database. Use them to provide 
       maxDocuments: 5,
       deduplicate: true,
     });
+  }
+
+  static getRegistration(): AgentRegistration {
+    return {
+      metadata: {
+        id: 'billing-support',
+        name: 'BillingSupport',
+        description:
+          'Manages subscriptions, payments, invoices, charges, and account billing issues',
+        categories: ['support', 'billing'],
+        keywords: [
+          'billing',
+          'payment',
+          'subscription',
+          'invoice',
+          'charges',
+          'premium',
+          'cancel',
+          'upgrade',
+          'account',
+        ],
+      },
+      capabilities: {
+        taskTypes: ['billing-support', 'subscription-management', 'payment-assistance'],
+        examples: [
+          'How much does Premium cost?',
+          'I was charged twice this month',
+          'How do I cancel my subscription?',
+          'Can I upgrade to the Premium plan?',
+        ],
+        limitations: ['Cannot process technical support requests', 'Cannot handle returns'],
+      },
+    };
   }
 }
