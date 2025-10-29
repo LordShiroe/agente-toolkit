@@ -4,6 +4,7 @@ A RAG-powered AI agent that answers questions about the agente-toolkit documenta
 
 ## Features
 
+✅ **Auto-discovery**: Automatically finds and indexes all markdown documentation  
 ✅ **Hybrid RAG**: Pre-prompt retrieval + agentic tool for follow-up queries  
 ✅ **Intelligent reasoning**: Agent decides when to retrieve more context  
 ✅ **Citation support**: Automatic [n]-style references in responses  
@@ -89,20 +90,62 @@ examples/docs-qa/
 
 ## How Ingestion Works
 
-The `ingest.ts` module:
+The `ingest.ts` module uses **automatic markdown discovery**:
 
-1. **Loads documentation**: Reads markdown files from `docs/` and `README.md`
-2. **Chunks by headings**: Splits documents at heading boundaries (~600 chars per chunk)
-3. **Embeds locally**: Uses `TransformersEmbedder` (Transformers.js WASM) for semantic embeddings
-4. **Stores in memory**: Indexes in `InMemoryVectorStore` for fast retrieval
+1. **Auto-discovers documentation**: Scans the entire repository for `.md` files
+2. **Smart filtering**: Excludes `node_modules`, `coverage`, meta files (CHANGELOG, etc.)
+3. **Auto-categorization**: Groups files by path:
+   - `README.md` → `readme`
+   - `docs/guides/*.md` → `guide`
+   - `docs/api/*.md` → `api`
+   - `docs/adapters/*.md` → `adapter`
+   - `docs/getting-started/*.md` → `getting-started`
+4. **Chunks by headings**: Splits documents at heading boundaries (~600 chars per chunk)
+5. **Embeds locally**: Uses `TransformersEmbedder` (Transformers.js WASM) for semantic embeddings
+6. **Stores in memory**: Indexes in `InMemoryVectorStore` for fast retrieval
 
-### Sources
+### Auto-Discovered Sources (17 files)
 
-- `README.md` (readme)
-- `docs/guides/building-agents.md` (guide)
-- `docs/guides/rag-integration.md` (guide)
-- `docs/guides/tool-development.md` (guide)
-- `docs/api/overview.md` (api)
+The agent automatically indexes:
+
+- `README.md`
+- `docs/guides/` (5 files: building-agents, rag-integration, tool-development, LOGGING, advanced-patterns)
+- `docs/api/` (1 file: overview)
+- `docs/adapters/` (3 files: claude, ollama, openai)
+- `docs/getting-started/` (3 files: installation, configuration, quick-start)
+- `examples/README.md`
+- `examples/customer-support/README.md`
+- `examples/docs-qa/README.md`
+
+**Total**: ~334 chunks from all documentation
+
+### Customization
+
+You can customize the auto-discovery behavior:
+
+```typescript
+import { ingestDocumentation } from './lib/ingest';
+
+// Default: auto-discover all markdown files
+const result = await ingestDocumentation();
+
+// Disable auto-discovery (use manual list)
+const result = await ingestDocumentation({ autoDiscover: false });
+
+// Custom exclude patterns
+const result = await ingestDocumentation({
+  excludePatterns: [
+    'node_modules/**',
+    'examples/**', // Skip example docs
+    'CHANGELOG.md',
+  ],
+});
+
+// Manual mode (specify exact files)
+const result = await ingestDocumentation({
+  includePaths: ['README.md', 'docs/api/overview.md'],
+});
+```
 
 ## Troubleshooting
 
