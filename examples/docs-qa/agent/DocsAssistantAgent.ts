@@ -45,6 +45,7 @@ export class DocsAssistantAgent extends Agent {
   private embedder: TransformersEmbedder | null = null;
   private store: InMemoryVectorStore | null = null;
   private initialized: Promise<void>;
+  private lastRetrievedSources: RetrievedDocument[] = [];
 
   protected tools = [
     {
@@ -196,6 +197,12 @@ Use these citations in your responses to help users find the original documentat
       minScore,
     });
 
+    for (const doc of retrieved) {
+      if (!this.lastRetrievedSources.some(s => s.id === doc.id)) {
+        this.lastRetrievedSources.push(doc);
+      }
+    }
+
     if (retrieved.length === 0) {
       return {
         documents: [],
@@ -249,6 +256,7 @@ Use these citations in your responses to help users find the original documentat
    */
   async run(userMessage: string, adapter: any): Promise<string> {
     await this.initialized;
+    this.lastRetrievedSources = [];
 
     // Pre-prompt retrieval: Get initial context before LLM call
     if (this.retriever) {
@@ -258,6 +266,7 @@ Use these citations in your responses to help users find the original documentat
           minScore: 0.35,
         });
         if (initialContext.length > 0) {
+          this.lastRetrievedSources = [...initialContext];
           // Inject context into the user message
           const contextText = this.formatInitialContext(initialContext);
           const augmentedMessage = `${contextText}\n\nUser question: ${userMessage}`;
@@ -291,5 +300,9 @@ Use these citations in your responses to help users find the original documentat
 
   getMetadata(): AgentRegistration {
     return DocsAssistantAgent.metadata;
+  }
+
+  getLastRetrievedSources(): RetrievedDocument[] {
+    return this.lastRetrievedSources;
   }
 }

@@ -14,6 +14,19 @@ export async function runSingleQuestion(adapter: LLMAdapter, question: string): 
 
   console.log(chalk.green('\n💡 Answer:'));
   console.log(answer);
+
+  const sources = agent.getLastRetrievedSources();
+  if (sources.length > 0) {
+    console.log(chalk.cyan('\n📚 Sources Used:'));
+    sources.forEach((doc, idx) => {
+      const citation = idx + 1;
+      const location = doc.metadata?.heading
+        ? `${doc.metadata.path} › ${doc.metadata.heading}`
+        : doc.metadata?.path || 'unknown';
+      console.log(chalk.gray(`  [${citation}] ${location}`));
+    });
+  }
+
   console.log(chalk.gray(`\n⏱️  Response time: ${duration}ms`));
   console.log(chalk.gray('─'.repeat(80)));
 }
