@@ -1,11 +1,11 @@
-import { Agent } from '../../../src/core/agent/Agent';
-import { AgentRegistration } from '../../../src/core/agent/types/AgentMetadata';
+import { Agent } from '../../src/core/agent/Agent';
+import { AgentRegistration } from '../../src/core/agent/types/AgentMetadata';
 import { Type } from '@sinclair/typebox';
-import { ingestDocumentation } from '../lib/ingest';
-import { VectorStoreRetriever } from '../../../src/core/retrieval/implementations/VectorStoreRetriever';
-import { InMemoryVectorStore } from '../../../src/core/retrieval/implementations/InMemoryVectorStore';
-import { TransformersEmbedder } from '../../../src/core/retrieval/implementations/TransformersEmbedder';
-import { RetrievedDocument } from '../../../src/core/retrieval/types/Document';
+import { ingestDocumentation } from './ingest';
+import { VectorStoreRetriever } from '../../src/core/retrieval/implementations/VectorStoreRetriever';
+import { InMemoryVectorStore } from '../../src/core/retrieval/implementations/InMemoryVectorStore';
+import { TransformersEmbedder } from '../../src/core/retrieval/implementations/TransformersEmbedder';
+import { RetrievedDocument } from '../../src/core/retrieval/types/Document';
 
 interface RetrievalResult {
   [key: string]: any;

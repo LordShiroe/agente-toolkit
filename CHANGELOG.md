@@ -12,7 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Retrieval-Augmented Generation (RAG) System**: Complete modular RAG implementation
 
   - Core interfaces: `Embedder`, `VectorStore`, `Retriever`, `PromptComposer`
-  - Default implementations: `LocalEmbedder` (Transformers.js with WASM backend), `InMemoryVectorStore`, `VectorStoreRetriever`, `DefaultPromptComposer`
+  - Default implementations: `TransformersEmbedder` (Transformers.js with WASM backend), `InMemoryVectorStore`, `VectorStoreRetriever`, `DefaultPromptComposer`
   - `SourceRegistry` for managing retrieval sources by ID
   - `RetrievalAugmentor` for injecting retrieved context into prompts
   - Optional per-agent retrieval configuration via `AgentRegistration.retrieval`
@@ -44,7 +44,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   **Shared Infrastructure**:
 
   - Ingests README.md and docs/guides/\*.md with smart chunking (~600 chars)
-  - Uses `LocalEmbedder` (Transformers.js WASM) for local embeddings - no API keys required
+  - Uses `TransformersEmbedder` (Transformers.js WASM) for local embeddings - no API keys required
   - 162 documentation chunks loaded, achieves 0.4-0.5 similarity scores on relevant queries
   - Citation tracking and metadata preservation
   - Comprehensive README comparing both approaches with usage examples

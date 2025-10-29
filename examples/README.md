@@ -68,7 +68,7 @@ A fully runnable RAG (Retrieval-Augmented Generation) example that answers quest
 **Features:**
 
 - Fully local (no API keys required)
-- Uses `LocalEmbedder` with Transformers.js (WASM)
+- Uses `TransformersEmbedder` with Transformers.js (WASM)
 - Ingests README and docs/guides/\*.md
 - Smart chunking with metadata tracking
 - Semantic search with citation support

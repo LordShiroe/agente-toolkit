@@ -22,7 +22,7 @@ export async function runDemo(adapter: LLMAdapter): Promise<void> {
   console.log(chalk.cyan('\n🤖 Initializing DocsAssistantAgent...'));
 
   const demoQuestions = [
-    'What is LocalEmbedder and how do I use it?',
+    'What is TransformersEmbedder and how do I use it?',
     'How do I configure RAG for an agent?',
     'What are the available LLM adapters?',
   ];

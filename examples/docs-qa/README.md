@@ -62,8 +62,8 @@ const agent = new DocsAssistantAgent();
 const adapter = new OpenAIAdapter(process.env.OPENAI_API_KEY);
 
 // Agent automatically retrieves relevant docs and responds with citations
-const answer = await agent.run('How do I use LocalEmbedder with custom models?', adapter);
-// → "Based on the documentation [1], LocalEmbedder accepts a model parameter..."
+const answer = await agent.run('How do I use TransformersEmbedder with custom models?', adapter);
+// → "Based on the documentation [1], TransformersEmbedder accepts a model parameter..."
 ```
 
 ## Project Structure
@@ -93,7 +93,7 @@ The `ingest.ts` module:
 
 1. **Loads documentation**: Reads markdown files from `docs/` and `README.md`
 2. **Chunks by headings**: Splits documents at heading boundaries (~600 chars per chunk)
-3. **Embeds locally**: Uses `LocalEmbedder` (Transformers.js WASM) for semantic embeddings
+3. **Embeds locally**: Uses `TransformersEmbedder` (Transformers.js WASM) for semantic embeddings
 4. **Stores in memory**: Indexes in `InMemoryVectorStore` for fast retrieval
 
 ### Sources
