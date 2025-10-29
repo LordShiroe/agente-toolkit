@@ -10,7 +10,6 @@ export * from './interfaces/PromptComposer';
 
 // Implementations
 export * from './implementations/TransformersEmbedder';
-export * from './implementations/LocalEmbedder';
 export * from './implementations/InMemoryVectorStore';
 export * from './implementations/VectorStoreRetriever';
 export * from './implementations/DefaultPromptComposer';

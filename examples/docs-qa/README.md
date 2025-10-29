@@ -1,0 +1,145 @@
+# DocsAssistantAgent Example
+
+A RAG-powered AI agent that answers questions about the agente-toolkit documentation.
+
+## Features
+
+✅ **Hybrid RAG**: Pre-prompt retrieval + agentic tool for follow-up queries  
+✅ **Intelligent reasoning**: Agent decides when to retrieve more context  
+✅ **Citation support**: Automatic [n]-style references in responses  
+✅ **Multi-turn aware**: Can handle follow-up questions with context  
+✅ **OpenAI-powered**: Uses GPT-4 mini by default
+
+## Quick Start
+
+### Prerequisites
+
+- Node.js 18+
+- OpenAI API key
+
+### Installation
+
+```bash
+npm install
+```
+
+### Run the Example
+
+**Demo mode** (runs sample questions):
+
+```bash
+OPENAI_API_KEY=sk-... npx tsx examples/docs-qa
+```
+
+**Ask a specific question**:
+
+```bash
+OPENAI_API_KEY=sk-... npx tsx examples/docs-qa --question "How do I configure RAG?"
+```
+
+**Show help**:
+
+```bash
+npx tsx examples/docs-qa --help
+```
+
+## How It Works
+
+The `DocsAssistantAgent`:
+
+1. **Pre-prompt retrieval**: Automatically retrieves 3 most relevant docs before generating response
+2. **Agentic RAG**: Has a `retrieve_documentation` tool it can call for additional context
+3. **Citation formatting**: Includes [n] references to source documents
+4. **Conversational**: Maintains context across messages
+
+### Example
+
+```typescript
+import { DocsAssistantAgent } from './examples/docs-qa/agent/DocsAssistantAgent';
+import { OpenAIAdapter } from 'agente-toolkit';
+
+const agent = new DocsAssistantAgent();
+const adapter = new OpenAIAdapter(process.env.OPENAI_API_KEY);
+
+// Agent automatically retrieves relevant docs and responds with citations
+const answer = await agent.run('How do I use LocalEmbedder with custom models?', adapter);
+// → "Based on the documentation [1], LocalEmbedder accepts a model parameter..."
+```
+
+## Project Structure
+
+```
+examples/docs-qa/
+├── index.ts              # Main entrypoint (thin shell)
+├── agent/
+│   └── DocsAssistantAgent.ts   # RAG-powered agent class
+└── lib/
+    ├── ingest.ts        # Documentation ingestion & chunking
+    ├── adapters.ts      # LLM adapter factory
+    ├── cli.ts           # CLI argument parser (commander)
+    └── runner.ts        # Demo and question runners
+```
+
+## CLI Options
+
+```
+-q, --question <text>   Question to ask (if omitted, runs demo questions)
+-h, --help              Show help message
+```
+
+## How Ingestion Works
+
+The `ingest.ts` module:
+
+1. **Loads documentation**: Reads markdown files from `docs/` and `README.md`
+2. **Chunks by headings**: Splits documents at heading boundaries (~600 chars per chunk)
+3. **Embeds locally**: Uses `LocalEmbedder` (Transformers.js WASM) for semantic embeddings
+4. **Stores in memory**: Indexes in `InMemoryVectorStore` for fast retrieval
+
+### Sources
+
+- `README.md` (readme)
+- `docs/guides/building-agents.md` (guide)
+- `docs/guides/rag-integration.md` (guide)
+- `docs/guides/tool-development.md` (guide)
+- `docs/api/overview.md` (api)
+
+## Troubleshooting
+
+### No results found
+
+Try lowering the similarity threshold or retrieving more candidates:
+
+```bash
+npx tsx examples/docs-qa --question "your question"
+```
+
+The agent will automatically adjust thresholds if initial retrieval returns no results.
+
+### Slow first run
+
+The embedder model (~20MB) is downloaded on first use. Subsequent runs are faster with cached model.
+
+### API key not set
+
+Make sure to set `OPENAI_API_KEY` environment variable:
+
+```bash
+export OPENAI_API_KEY=sk-...
+npx tsx examples/docs-qa --question "How do I get started?"
+```
+
+Or customize the model:
+
+```bash
+OPENAI_MODEL=gpt-4 npx tsx examples/docs-qa
+```
+
+## Next Steps
+
+- **Production**: Swap `InMemoryVectorStore` for pgvector/Qdrant/Chroma
+- **Better embeddings**: Use OpenAI or Cohere API embedders for higher quality
+- **Multi-modal**: Add screenshot context for UI-aware RAG
+- **Caching**: Cache embeddings and retrieval results
+
+See `docs/guides/rag-integration.md` for advanced patterns.

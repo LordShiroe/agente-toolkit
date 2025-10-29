@@ -40,7 +40,6 @@ export type {
   SourceConfig,
 } from './core/retrieval';
 export {
-  LocalEmbedder,
   TransformersEmbedder,
   InMemoryVectorStore,
   VectorStoreRetriever,

@@ -12,7 +12,7 @@ import { SourceRegistry } from '../retrieval/SourceRegistry';
 
 export class Agent {
   private memoryManager: MemoryManager;
-  private tools: Tool<any, any>[] = [];
+  protected tools: Tool<any, any>[] = [];
   private prompt: string = '';
   private executionEngine: ExecutionEngine;
   private logger: AgentLogger;
