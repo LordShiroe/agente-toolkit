@@ -5,74 +5,17 @@ import { TransformersEmbedder } from '../../../src/core/retrieval/implementation
 import { InMemoryVectorStore } from '../../../src/core/retrieval/implementations/InMemoryVectorStore';
 import type { Document } from '../../../src/core/retrieval/types/Document';
 
-export interface IngestOptions {
-  /** Root directory to scan for documentation files (defaults to repo root) */
-  rootDir?: string;
-  /** Maximum characters per chunk (after Markdown stripping) */
-  chunkSize?: number;
-  /** Overlap characters between adjacent chunks */
-  chunkOverlap?: number;
-  /** Restrict ingestion to specific relative file paths (disables auto-discovery) */
-  includePaths?: string[];
-  /** Enable automatic discovery of all .md files (default: true) */
-  autoDiscover?: boolean;
-  /** Patterns to exclude from auto-discovery */
-  excludePatterns?: string[];
-}
-
 export interface IngestResult {
   embedder: TransformersEmbedder;
   store: InMemoryVectorStore;
   documents: Document[];
 }
 
-interface SourceDefinition {
-  source: string;
-  relativePath: string;
-}
-
-const DEFAULT_SOURCES: SourceDefinition[] = [
-  { source: 'readme', relativePath: 'README.md' },
-  { source: 'guide', relativePath: 'docs/guides/building-agents.md' },
-  { source: 'guide', relativePath: 'docs/guides/rag-integration.md' },
-  { source: 'guide', relativePath: 'docs/guides/tool-development.md' },
-  { source: 'api', relativePath: 'docs/api/overview.md' },
-];
-
-const DEFAULT_EXCLUDE_PATTERNS = [
-  'node_modules/**',
-  '**/node_modules/**',
-  'coverage/**',
-  '**/coverage/**',
-  'dist/**',
-  '**/dist/**',
-  'build/**',
-  '**/build/**',
-  '.git/**',
-  '**/.git/**',
-  'CHANGELOG.md',
-  'CONTRIBUTING.md',
-  'SECURITY.md',
-  'LICENSE.md',
-  'CODE_OF_CONDUCT.md',
-  'adr/**',
-  '**/adr/**',
-];
-
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const REPO_ROOT = path.resolve(__dirname, '..', '..', '..');
+const CHUNK_SIZE = 600;
+const CHUNK_OVERLAP = 80;
 
-function resolveRootDir(options?: IngestOptions): string {
-  if (options?.rootDir) {
-    return path.resolve(options.rootDir);
-  }
-
-  // examples/docs-qa/lib -> repo root
-  return path.resolve(__dirname, '..', '..', '..');
-}
-
-/**
- * Categorize a file based on its path to determine the source type
- */
 function categorizeSource(relativePath: string): string {
   const normalized = relativePath.replace(/\\/g, '/').toLowerCase();
 
@@ -101,36 +44,41 @@ function categorizeSource(relativePath: string): string {
   return 'other';
 }
 
-/**
- * Check if a file path matches any of the exclude patterns
- */
-function isExcluded(relativePath: string, excludePatterns: string[]): boolean {
+function isExcluded(relativePath: string): boolean {
   const normalized = relativePath.replace(/\\/g, '/');
 
-  // Quick check for common exclusions
   if (normalized.startsWith('node_modules/') || normalized.includes('/node_modules/')) {
     return true;
   }
   if (normalized.startsWith('.git/') || normalized.includes('/.git/')) {
     return true;
   }
-
-  for (const pattern of excludePatterns) {
-    const regexPattern = pattern.replace(/\*\*/g, '.*').replace(/\*/g, '[^/]*').replace(/\?/g, '.');
-
-    const regex = new RegExp(`^${regexPattern}$`, 'i');
-    if (regex.test(normalized)) {
-      return true;
-    }
+  if (normalized.startsWith('coverage/') || normalized.includes('/coverage/')) {
+    return true;
+  }
+  if (normalized.startsWith('dist/') || normalized.includes('/dist/')) {
+    return true;
+  }
+  if (normalized.startsWith('build/') || normalized.includes('/build/')) {
+    return true;
+  }
+  if (normalized.startsWith('adr/') || normalized.includes('/adr/')) {
+    return true;
+  }
+  if (
+    normalized.endsWith('CHANGELOG.md') ||
+    normalized.endsWith('CONTRIBUTING.md') ||
+    normalized.endsWith('SECURITY.md') ||
+    normalized.endsWith('LICENSE.md') ||
+    normalized.endsWith('CODE_OF_CONDUCT.md')
+  ) {
+    return true;
   }
 
   return false;
 }
 
-/**
- * Recursively scan directory for markdown files
- */
-async function scanMarkdownFiles(rootDir: string, excludePatterns: string[]): Promise<string[]> {
+async function scanMarkdownFiles(): Promise<string[]> {
   const markdownFiles: string[] = [];
 
   async function scan(dir: string): Promise<void> {
@@ -138,10 +86,9 @@ async function scanMarkdownFiles(rootDir: string, excludePatterns: string[]): Pr
 
     for (const entry of entries) {
       const fullPath = path.join(dir, entry.name);
-      const relativePath = path.relative(rootDir, fullPath);
+      const relativePath = path.relative(REPO_ROOT, fullPath);
 
-      // Check if excluded
-      if (isExcluded(relativePath, excludePatterns)) {
+      if (isExcluded(relativePath)) {
         continue;
       }
 
@@ -153,7 +100,7 @@ async function scanMarkdownFiles(rootDir: string, excludePatterns: string[]): Pr
     }
   }
 
-  await scan(rootDir);
+  await scan(REPO_ROOT);
   return markdownFiles.sort();
 }
 
@@ -255,44 +202,22 @@ function chunkMarkdown(
   return chunks;
 }
 
-async function collectDocuments(options?: IngestOptions): Promise<Document[]> {
-  const rootDir = resolveRootDir(options);
+async function collectDocuments(): Promise<Document[]> {
   const documents: Document[] = [];
-  const chunkSize = options?.chunkSize ?? 600;
-  const chunkOverlap = options?.chunkOverlap ?? 80;
-
-  let filesToProcess: SourceDefinition[] = [];
-
-  // Manual mode: use includePaths if provided
-  if (options?.includePaths && options.includePaths.length > 0) {
-    filesToProcess = DEFAULT_SOURCES.filter(source =>
-      options.includePaths!.includes(source.relativePath)
-    );
-    console.log(`📋 Manual mode: Processing ${filesToProcess.length} specified files`);
-  }
-  // Auto-discovery mode (default)
-  else if (options?.autoDiscover !== false) {
-    const excludePatterns = options?.excludePatterns ?? DEFAULT_EXCLUDE_PATTERNS;
-    console.log('🔍 Auto-discovering markdown files...');
-
-    const discoveredFiles = await scanMarkdownFiles(rootDir, excludePatterns);
-    console.log(`   Found ${discoveredFiles.length} markdown files`);
-
-    filesToProcess = discoveredFiles.map(relativePath => ({
-      source: categorizeSource(relativePath),
-      relativePath,
-    }));
-  }
-  // Fallback to default sources if auto-discovery is explicitly disabled
-  else {
-    filesToProcess = DEFAULT_SOURCES;
-    console.log(`📋 Using default sources: ${filesToProcess.length} files`);
-  }
-
   const stats = new Map<string, number>();
 
+  console.log('🔍 Auto-discovering markdown files...');
+
+  const discoveredFiles = await scanMarkdownFiles();
+  console.log(`   Found ${discoveredFiles.length} markdown files`);
+
+  const filesToProcess = discoveredFiles.map(relativePath => ({
+    source: categorizeSource(relativePath),
+    relativePath,
+  }));
+
   for (const sourceDef of filesToProcess) {
-    const absolutePath = path.join(rootDir, sourceDef.relativePath);
+    const absolutePath = path.join(REPO_ROOT, sourceDef.relativePath);
     const markdown = await readFileIfExists(absolutePath);
     if (!markdown) {
       console.warn(`⚠️  Skipping missing file: ${sourceDef.relativePath}`);
@@ -300,17 +225,15 @@ async function collectDocuments(options?: IngestOptions): Promise<Document[]> {
     }
 
     const chunks = chunkMarkdown(markdown, sourceDef.source, sourceDef.relativePath, {
-      chunkSize,
-      chunkOverlap,
+      chunkSize: CHUNK_SIZE,
+      chunkOverlap: CHUNK_OVERLAP,
     });
     documents.push(...chunks);
 
-    // Track statistics
     const count = stats.get(sourceDef.source) ?? 0;
     stats.set(sourceDef.source, count + chunks.length);
   }
 
-  // Log statistics
   if (stats.size > 0) {
     console.log('📊 Ingestion statistics:');
     for (const [source, count] of Array.from(stats.entries()).sort()) {
@@ -321,13 +244,13 @@ async function collectDocuments(options?: IngestOptions): Promise<Document[]> {
   return documents;
 }
 
-export async function ingestDocumentation(options?: IngestOptions): Promise<IngestResult> {
+export async function ingestDocumentation(): Promise<IngestResult> {
   console.log('📚 Ingesting documentation into vector store...\n');
 
   const embedder = new TransformersEmbedder();
   const store = new InMemoryVectorStore(embedder);
 
-  const documents = await collectDocuments(options);
+  const documents = await collectDocuments();
   if (documents.length === 0) {
     console.warn('⚠️  No documentation chunks collected. Ensure files exist.');
   }

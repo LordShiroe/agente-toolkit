@@ -38,11 +38,7 @@ OPENAI_API_KEY=sk-... npx tsx examples/docs-qa
 OPENAI_API_KEY=sk-... npx tsx examples/docs-qa --question "How do I configure RAG?"
 ```
 
-**Show help**:
-
-```bash
-npx tsx examples/docs-qa --help
-```
+````
 
 ## How It Works
 
@@ -65,7 +61,7 @@ const adapter = new OpenAIAdapter(process.env.OPENAI_API_KEY);
 // Agent automatically retrieves relevant docs and responds with citations
 const answer = await agent.run('How do I use TransformersEmbedder with custom models?', adapter);
 // → "Based on the documentation [1], TransformersEmbedder accepts a model parameter..."
-```
+````
 
 ## Project Structure
 
@@ -85,7 +81,6 @@ examples/docs-qa/
 
 ```
 -q, --question <text>   Question to ask (if omitted, runs demo questions)
--h, --help              Show help message
 ```
 
 ## How Ingestion Works
@@ -119,34 +114,6 @@ The agent automatically indexes:
 
 **Total**: ~334 chunks from all documentation
 
-### Customization
-
-You can customize the auto-discovery behavior:
-
-```typescript
-import { ingestDocumentation } from './lib/ingest';
-
-// Default: auto-discover all markdown files
-const result = await ingestDocumentation();
-
-// Disable auto-discovery (use manual list)
-const result = await ingestDocumentation({ autoDiscover: false });
-
-// Custom exclude patterns
-const result = await ingestDocumentation({
-  excludePatterns: [
-    'node_modules/**',
-    'examples/**', // Skip example docs
-    'CHANGELOG.md',
-  ],
-});
-
-// Manual mode (specify exact files)
-const result = await ingestDocumentation({
-  includePaths: ['README.md', 'docs/api/overview.md'],
-});
-```
-
 ## Troubleshooting
 
 ### No results found
@@ -177,12 +144,3 @@ Or customize the model:
 ```bash
 OPENAI_MODEL=gpt-4 npx tsx examples/docs-qa
 ```
-
-## Next Steps
-
-- **Production**: Swap `InMemoryVectorStore` for pgvector/Qdrant/Chroma
-- **Better embeddings**: Use OpenAI or Cohere API embedders for higher quality
-- **Multi-modal**: Add screenshot context for UI-aware RAG
-- **Caching**: Cache embeddings and retrieval results
-
-See `docs/guides/rag-integration.md` for advanced patterns.
