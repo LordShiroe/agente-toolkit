@@ -26,6 +26,7 @@ A modern TypeScript library for building AI agents with **native tool calling** 
 
 - **Conversational Responses**: Automatic post-processing converts raw tool results into natural language
 - **Memory Management**: Context-aware memory with relevance scoring
+- **Retrieval-Augmented Generation (RAG)**: Optional pluggable retrieval system to ground responses in external knowledge
 - **Safety Guardrails**: Max steps, max duration, stop-on-first-error
 - **Comprehensive Logging**: Detailed execution tracking with step-level timings
 
@@ -350,10 +351,10 @@ const manager = new ManagerAgent(new ClaudeAdapter(process.env.ANTHROPIC_API_KEY
 See the docs for guides and references:
 
 - Getting Started: [Installation](./docs/getting-started/installation.md) · [Quick Start](./docs/getting-started/quick-start.md) · [Configuration](./docs/getting-started/configuration.md)
-- Guides: [Building Agents](./docs/guides/building-agents.md) · [Tool Development](./docs/guides/tool-development.md)
+- Guides: [Building Agents](./docs/guides/building-agents.md) · [Tool Development](./docs/guides/tool-development.md) · [RAG Integration](./docs/guides/rag-integration.md)
 - Providers: [Claude](./docs/adapters/claude.md) · [OpenAI](./docs/adapters/openai.md) · [Ollama](./docs/adapters/ollama.md)
 
-Reference: [CHANGELOG](./CHANGELOG.md) · [CONTRIBUTING](./CONTRIBUTING.md) · [SECURITY](./SECURITY.md) · [LOGGING](./LOGGING.md) · [Examples](./examples/README.md)
+Reference: [CHANGELOG](./CHANGELOG.md) · [CONTRIBUTING](./CONTRIBUTING.md) · [SECURITY](./SECURITY.md) · [LOGGING](./LOGGING.md) · [Examples](./examples/README.md) · [RAG Example](./examples/rag-example.md)
 
 ## 🤝 Contributing
 

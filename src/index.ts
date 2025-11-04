@@ -27,3 +27,24 @@ export type { AgentMetadata, AgentCapability, AgentRegistration } from './core/a
 // Optional: expose common tools and types for consumers
 export type { Tool } from './core/tools';
 export type { RunOptions } from './core/agent';
+
+// Retrieval/RAG System
+export type {
+  Embedder,
+  VectorStore,
+  Retriever,
+  PromptComposer,
+  Document,
+  RetrievedDocument,
+  RetrievalConfig,
+  SourceConfig,
+} from './core/retrieval';
+export {
+  TransformersEmbedder,
+  InMemoryVectorStore,
+  VectorStoreRetriever,
+  DefaultPromptComposer,
+  SourceRegistry,
+  RetrievalAugmentor,
+  globalSourceRegistry,
+} from './core/retrieval';

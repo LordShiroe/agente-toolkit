@@ -7,19 +7,26 @@ import { LoggerUtils } from '../../infrastructure/logging/utils/loggerUtils';
 import { Tool, Serializable } from '../tools/types/Tool';
 import { RunOptions } from './types/RunOptions';
 import { TSchema } from '@sinclair/typebox';
+import { RetrievalConfig } from '../retrieval/types/RetrievalConfig';
+import { SourceRegistry } from '../retrieval/SourceRegistry';
 
 export class Agent {
   private memoryManager: MemoryManager;
-  private tools: Tool<any, any>[] = [];
+  protected tools: Tool<any, any>[] = [];
   private prompt: string = '';
   private executionEngine: ExecutionEngine;
   private logger: AgentLogger;
   private loggerUtils: LoggerUtils;
+  private retrievalConfig?: RetrievalConfig;
 
-  constructor(memoryManager?: MemoryManager, logger?: AgentLogger) {
+  constructor(
+    memoryManager?: MemoryManager,
+    logger?: AgentLogger,
+    sourceRegistry?: SourceRegistry
+  ) {
     this.memoryManager = memoryManager || new SlidingWindowMemoryManager();
     this.logger = logger || createDefaultLogger();
-    this.executionEngine = new ExecutionEngine(this.logger);
+    this.executionEngine = new ExecutionEngine(this.logger, sourceRegistry);
     this.loggerUtils = new LoggerUtils(this.logger);
   }
 
@@ -56,6 +63,14 @@ export class Agent {
 
   getPrompt(): string {
     return this.prompt;
+  }
+
+  setRetrievalConfig(config: RetrievalConfig) {
+    this.retrievalConfig = config;
+  }
+
+  getRetrievalConfig(): RetrievalConfig | undefined {
+    return this.retrievalConfig;
   }
 
   async run(message: string, model: ModelAdapter, options: RunOptions = {}): Promise<string> {
@@ -95,6 +110,7 @@ export class Agent {
         systemPrompt: this.prompt,
         model,
         options,
+        retrieval: this.retrievalConfig,
       };
 
       // Delegate to execution engine
