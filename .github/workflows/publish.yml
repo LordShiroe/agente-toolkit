@@ -46,18 +46,3 @@ jobs:
 
       - name: Publish to NPM
         run: npm publish
-
-      - name: Create GitHub release notes
-        uses: actions/github-script@v6
-        with:
-          script: |
-            const version = require('./package.json').version;
-            await github.rest.repos.createRelease({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              tag_name: `v${version}`,
-              name: `Release v${version}`,
-              body: 'See CHANGELOG.md for details',
-              draft: false,
-              prerelease: version.includes('beta') || version.includes('alpha')
-            });
