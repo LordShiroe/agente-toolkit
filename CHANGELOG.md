@@ -5,7 +5,49 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [0.3.0] - 2025-11-03
+
+### Added
+
+- **Retrieval-Augmented Generation (RAG) System**: Complete modular RAG implementation
+
+  - Core interfaces: `Embedder`, `VectorStore`, `Retriever`, `PromptComposer`
+  - Default implementations: `TransformersEmbedder` (Transformers.js with WASM backend), `InMemoryVectorStore`, `VectorStoreRetriever`, `DefaultPromptComposer`
+  - `SourceRegistry` for managing retrieval sources by ID
+  - `RetrievalAugmentor` for injecting retrieved context into prompts
+  - Optional per-agent retrieval configuration via `AgentRegistration.retrieval`
+  - LLM-agnostic design works with Claude, OpenAI, Ollama, or any adapter
+  - Local embeddings via Transformers.js (@xenova/transformers) with WASM backend for universal compatibility
+  - Comprehensive test coverage (31 new tests)
+  - Full documentation: `docs/guides/rag-integration.md` and `examples/rag-example.md`
+
+- **Multi-Source Docs QA Example** (`examples/docs-qa/`): Complete RAG demonstration with two approaches
+
+  **DocsAssistantAgent (Recommended)**: Full AI agent with hybrid RAG capabilities
+
+  - Extends `Agent` base class with RAG-powered documentation assistance
+  - **Hybrid RAG Approach**: Combines pre-prompt retrieval + agentic tool
+    - Pre-prompt: Auto-injects relevant context before LLM sees the question
+    - Agentic: `retrieve_documentation` tool for dynamic context fetching
+  - Agent can decide when to retrieve more context based on conversation flow
+  - Citation formatting with [n]-style references
+  - Works with Claude or OpenAI adapters
+  - Runnable via `agent-example.ts` with CLI (`--adapter`, `--question` flags)
+  - Demo mode with 3 sample questions showcasing different RAG patterns
+
+  **CLI Tool (run.ts)**: Direct RAG pipeline for testing and quick lookups
+
+  - Answers questions about repository documentation using semantic search
+  - Configurable retrieval parameters (topK, minScore, source filters)
+  - Optional OpenAI integration for complete answers
+
+  **Shared Infrastructure**:
+
+  - Ingests README.md and docs/guides/\*.md with smart chunking (~600 chars)
+  - Uses `TransformersEmbedder` (Transformers.js WASM) for local embeddings - no API keys required
+  - 162 documentation chunks loaded, achieves 0.4-0.5 similarity scores on relevant queries
+  - Citation tracking and metadata preservation
+  - Comprehensive README comparing both approaches with usage examples
 
 ## [0.2.0] - 2025-10-20
 

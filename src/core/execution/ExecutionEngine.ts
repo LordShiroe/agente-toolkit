@@ -11,6 +11,9 @@ import {
   withFallbackMonitoring,
   withPlannedMonitoring,
 } from '../../infrastructure/monitoring/decorators/fallbackMonitoring';
+import { RetrievalConfig } from '../retrieval/types/RetrievalConfig';
+import { RetrievalAugmentor } from '../retrieval/RetrievalAugmentor';
+import { SourceRegistry } from '../retrieval/SourceRegistry';
 
 /**
  * Context for execution requests
@@ -22,6 +25,7 @@ export interface ExecutionContext {
   systemPrompt: string;
   model: ModelAdapter;
   options: RunOptions;
+  retrieval?: RetrievalConfig;
 }
 
 /**
@@ -32,15 +36,20 @@ export class ExecutionEngine {
   private responseProcessor = new ResponseProcessor();
   private logger: AgentLogger;
   private loggerUtils: LoggerUtils;
+  private retrievalAugmentor?: RetrievalAugmentor;
 
   // These properties will be set by the monitoring decorator
   private _currentExecutionId?: string;
   private _currentExecutionStartTime?: number;
 
-  constructor(logger?: AgentLogger) {
+  constructor(logger?: AgentLogger, sourceRegistry?: SourceRegistry) {
     this.logger = logger || createDefaultLogger();
     this.loggerUtils = new LoggerUtils(this.logger);
     this.planner = new Planner(this.logger);
+
+    if (sourceRegistry) {
+      this.retrievalAugmentor = new RetrievalAugmentor(sourceRegistry);
+    }
   }
 
   /**
@@ -67,10 +76,10 @@ export class ExecutionEngine {
    */
   @withFallbackMonitoring
   private async _tryNativeExecution(context: ExecutionContext): Promise<string> {
-    const { message, tools, memoryContext, systemPrompt, model } = context;
+    const { message, tools, memoryContext, systemPrompt, model, retrieval } = context;
 
-    // Build the full prompt with context
-    const fullPrompt = this._buildPrompt(message, memoryContext, systemPrompt);
+    // Build the full prompt with context (and retrieval if configured)
+    const fullPrompt = await this._buildPrompt(message, memoryContext, systemPrompt, retrieval);
 
     this.loggerUtils.logPrompt(fullPrompt, {
       userMessage: message,
@@ -121,9 +130,44 @@ export class ExecutionEngine {
   /**
    * Build full prompt with context and system prompt
    */
-  private _buildPrompt(message: string, memoryContext: string, systemPrompt: string): string {
+  private async _buildPrompt(
+    message: string,
+    memoryContext: string,
+    systemPrompt: string,
+    retrieval?: RetrievalConfig
+  ): Promise<string> {
     let fullPrompt = '';
 
+    // Apply retrieval augmentation if configured
+    if (retrieval && this.retrievalAugmentor) {
+      try {
+        this.logger.debug('Applying retrieval augmentation', {
+          sources: retrieval.sources,
+          maxDocuments: retrieval.maxDocuments,
+        });
+
+        // Augment returns the full prompt with system, context, and user message
+        fullPrompt = await this.retrievalAugmentor.augment(message, retrieval, systemPrompt);
+
+        // Add memory context after retrieval context
+        if (memoryContext && memoryContext !== 'No relevant context available.') {
+          // Insert memory context before the user request
+          const parts = fullPrompt.split('User request:');
+          if (parts.length === 2) {
+            fullPrompt = `${parts[0]}\nMemory context:\n${memoryContext}\n\nUser request:${parts[1]}`;
+          }
+        }
+
+        return fullPrompt;
+      } catch (error) {
+        this.logger.error('Retrieval augmentation failed, falling back to basic prompt', {
+          error: error instanceof Error ? error.message : String(error),
+        });
+        // Fall through to basic prompt building
+      }
+    }
+
+    // Basic prompt building (no retrieval)
     if (systemPrompt) {
       fullPrompt += `${systemPrompt}\n\n`;
     }

@@ -1,3 +1,5 @@
+import { RetrievalConfig } from '../../retrieval/types/RetrievalConfig';
+
 export interface AgentMetadata {
   /**
    * Unique identifier for the agent
@@ -61,4 +63,9 @@ export interface AgentCapability {
 export interface AgentRegistration {
   metadata: AgentMetadata;
   capabilities: AgentCapability;
+
+  /**
+   * Optional retrieval configuration for RAG
+   */
+  retrieval?: RetrievalConfig;
 }

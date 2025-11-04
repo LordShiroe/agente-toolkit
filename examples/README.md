@@ -59,6 +59,37 @@ Then the examples will be available in `examples/agents/`.
 
 ## Available Examples
 
+### Multi-Source Docs QA (RAG Example)
+
+**Location:** `examples/docs-qa/`
+
+A fully runnable RAG (Retrieval-Augmented Generation) example that answers questions about this repository's documentation using local semantic search.
+
+**Features:**
+
+- Fully local (no API keys required)
+- Uses `TransformersEmbedder` with Transformers.js (WASM)
+- Ingests README and docs/guides/\*.md
+- Smart chunking with metadata tracking
+- Semantic search with citation support
+- Optional OpenAI integration for full answers
+
+**Quick Start:**
+
+```bash
+# Ask a question (auto-ingests on first run)
+npx tsx examples/docs-qa/run.ts --q "How do I use RAG with retrieval?"
+
+# With OpenAI for full answer
+OPENAI_API_KEY=sk-... npx tsx examples/docs-qa/run.ts \
+  --q "How do I configure RAG?" \
+  --llm openai
+```
+
+See [examples/docs-qa/README.md](./docs-qa/README.md) for full documentation.
+
+---
+
 ### CalculatorAgent
 
 A simple agent that performs mathematical calculations.
