@@ -51,7 +51,16 @@ Memory types: `'conversation' | 'fact' | 'tool_result' | 'system'`
 ```ts
 new ClaudeAdapter(apiKey?: string, model?: string)
 new OpenAIAdapter(apiKey?: string, model?: string)
-new OllamaAdapter(baseUrl?: string, model?: string)
+new OllamaAdapter(
+  baseUrl?: string,
+  model?: string,
+  options?: {
+    headers?: Record<string, string>;
+    authToken?: string;
+    authHeaderName?: string;
+    authScheme?: string;
+  }
+)
 ```
 
 All adapters implement:

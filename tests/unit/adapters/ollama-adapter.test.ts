@@ -39,6 +39,32 @@ describe('OllamaAdapter', () => {
       const adapter = new OllamaAdapter('http://localhost:11434/', 'llama3.2:latest');
       expect(adapter.name).toBe('ollama'); // We can't directly test the private baseUrl, but this ensures construction works
     });
+
+    it('should accept reverse-proxy auth options', async () => {
+      const proxyAdapter = new OllamaAdapter('http://proxy.local/ollama', 'llama3.2:latest', {
+        authToken: 'secret-token',
+      });
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockOllamaGenerateResponse,
+      });
+
+      await proxyAdapter.complete('Hello');
+
+      expect(mockFetch).toHaveBeenCalledWith('http://proxy.local/ollama/api/generate', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: 'Bearer secret-token',
+        },
+        body: JSON.stringify({
+          model: 'llama3.2:latest',
+          prompt: 'Hello',
+          stream: false,
+        }),
+      });
+    });
   });
 
   describe('Text Completion', () => {
@@ -271,6 +297,35 @@ describe('OllamaAdapter', () => {
       expect(requestBody.tools[0].type).toBe('function');
       expect(requestBody.tools[0].function.name).toBe('test_tool');
       expect(requestBody.stream).toBe(false);
+    });
+
+    it('should merge custom headers for reverse proxies', async () => {
+      const proxyAdapter = new OllamaAdapter('http://localhost:11434', 'llama3.2:latest', {
+        authToken: 'token-123',
+        authHeaderName: 'X-Proxy-Auth',
+        authScheme: '',
+        headers: {
+          'X-Tenant-Id': 'tenant-a',
+        },
+      });
+
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        json: async () => mockOllamaGenerateResponse,
+      });
+
+      await proxyAdapter.complete('Ping');
+
+      expect(mockFetch).toHaveBeenCalledWith(
+        'http://localhost:11434/api/generate',
+        expect.objectContaining({
+          headers: {
+            'Content-Type': 'application/json',
+            'X-Proxy-Auth': 'token-123',
+            'X-Tenant-Id': 'tenant-a',
+          },
+        })
+      );
     });
   });
 });

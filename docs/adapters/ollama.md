@@ -20,11 +20,35 @@ console.log(result);
 ## Constructor
 
 ```ts
-new OllamaAdapter(baseUrl?: string, model?: string)
+new OllamaAdapter(
+  baseUrl?: string,
+  model?: string,
+  options?: {
+    headers?: Record<string, string>;
+    authToken?: string;
+    authHeaderName?: string;
+    authScheme?: string;
+  }
+)
 ```
 
 - `baseUrl` (optional): Defaults to `http://localhost:11434`.
 - `model` (optional): Defaults to `llama3.2:latest`.
+- `options.headers` (optional): Extra headers for every request (useful behind reverse proxies).
+- `options.authToken` (optional): Token for proxy auth.
+- `options.authHeaderName` (optional): Auth header name (default: `Authorization`).
+- `options.authScheme` (optional): Prefix before token (default: `Bearer `, set `''` for raw token).
+
+## Reverse Proxy Example
+
+```ts
+const adapter = new OllamaAdapter('https://llm.example.com/ollama', 'llama3.2:latest', {
+  authToken: process.env.OLLAMA_PROXY_TOKEN,
+  headers: {
+    'X-Tenant-Id': 'team-a',
+  },
+});
+```
 
 ## Setup
 
