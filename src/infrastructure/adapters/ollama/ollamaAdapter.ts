@@ -63,11 +63,34 @@ export class OllamaAdapter extends BaseAdapter {
 
   private baseUrl: string;
   private model: string;
+  private headers: Record<string, string>;
 
-  constructor(baseUrl = 'http://localhost:11434', model = 'llama3.2:latest') {
+  constructor(
+    baseUrl = 'http://localhost:11434',
+    model = 'llama3.2:latest',
+    options: OllamaAdapterOptions = {}
+  ) {
     super();
     this.baseUrl = baseUrl.replace(/\/$/, ''); // Remove trailing slash
     this.model = model;
+    this.headers = this.buildHeaders(options);
+  }
+
+  private buildHeaders(options: OllamaAdapterOptions): Record<string, string> {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json',
+    };
+
+    const authHeaderName = options.authHeaderName || 'Authorization';
+    if (options.authToken) {
+      const authPrefix = options.authScheme === undefined ? 'Bearer ' : options.authScheme;
+      headers[authHeaderName] = `${authPrefix}${options.authToken}`;
+    }
+
+    return {
+      ...headers,
+      ...(options.headers || {}),
+    };
   }
 
   /**
@@ -91,7 +114,7 @@ export class OllamaAdapter extends BaseAdapter {
       }
       const chatResponse = await fetch(`${this.baseUrl}/api/chat`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: this.headers,
         body: JSON.stringify(chatBody),
       });
       if (!chatResponse.ok) {
@@ -106,9 +129,7 @@ export class OllamaAdapter extends BaseAdapter {
     // Fallback to simple generate for plain text
     const response = await fetch(`${this.baseUrl}/api/generate`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: this.headers,
       body: JSON.stringify({
         model: this.model,
         prompt,
@@ -216,9 +237,7 @@ export class OllamaAdapter extends BaseAdapter {
   ): Promise<OllamaResponse> {
     const response = await fetch(`${this.baseUrl}/api/chat`, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
+      headers: this.headers,
       body: JSON.stringify({
         model: this.model,
         messages,
@@ -233,4 +252,21 @@ export class OllamaAdapter extends BaseAdapter {
 
     return (await response.json()) as OllamaResponse;
   }
+}
+
+export interface OllamaAdapterOptions {
+  /** Static headers to include in every Ollama request (e.g. reverse-proxy headers) */
+  headers?: Record<string, string>;
+
+  /** Token value used for proxy authentication */
+  authToken?: string;
+
+  /** Header name for proxy authentication. Defaults to Authorization */
+  authHeaderName?: string;
+
+  /**
+   * Prefix prepended to authToken. Defaults to 'Bearer '.
+   * Set to '' to send the token as-is.
+   */
+  authScheme?: string;
 }

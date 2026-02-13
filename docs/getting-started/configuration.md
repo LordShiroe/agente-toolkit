@@ -280,6 +280,19 @@ const adapter = new OllamaAdapter(
   process.env.OLLAMA_BASE_URL || 'http://localhost:11434',
   process.env.OLLAMA_MODEL || 'llama3.2:latest'
 );
+
+// If you're using a reverse proxy with auth in front of Ollama:
+const proxiedAdapter = new OllamaAdapter(
+  process.env.OLLAMA_BASE_URL || 'https://llm.example.com/ollama',
+  process.env.OLLAMA_MODEL || 'llama3.2:latest',
+  {
+    authToken: process.env.OLLAMA_PROXY_TOKEN,
+    // Optional extras:
+    // authHeaderName: 'X-Proxy-Auth',
+    // authScheme: '', // send raw token
+    // headers: { 'X-Tenant-Id': 'team-a' },
+  }
+);
 ```
 
 ## Agent Configuration
