@@ -172,6 +172,7 @@ describe('OllamaAdapter', () => {
 
       // Second call should include tool result
       expect(mockFetch.mock.calls[1][1].body).toContain('"role":"tool"');
+      expect(mockFetch.mock.calls[1][1].body).toContain('"tool_name":"calculator"');
     });
 
     it('should handle tool not found errors', async () => {
@@ -183,7 +184,7 @@ describe('OllamaAdapter', () => {
       const result = await adapter.executeWithTools('Calculate something', []);
 
       expect(result.success).toBe(false);
-      expect(result.errors).toContain('Tool calculator not found');
+      expect(result.errors).toContain('Tool "calculator" not found');
     });
 
     it('should handle API errors gracefully', async () => {
@@ -219,6 +220,81 @@ describe('OllamaAdapter', () => {
       expect(result.success).toBe(true);
       expect(result.content).toBe('I cannot help with calculations.');
       expect(result.toolCalls).toHaveLength(0);
+    });
+
+    it('should execute tool call when model returns JSON call in content', async () => {
+      const toolCallInContentResponse = {
+        ...mockOllamaToolResponse,
+        message: {
+          role: 'assistant' as const,
+          content: JSON.stringify({
+            name: 'calculator',
+            arguments: { operation: 'add', a: 20, b: 22 },
+          }),
+        },
+      };
+
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => toolCallInContentResponse,
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => mockOllamaFollowUpResponse,
+        });
+
+      const result = await adapter.executeWithTools('Calculate 20 + 22', [mockTool]);
+
+      expect(result.success).toBe(true);
+      expect(result.toolCalls).toHaveLength(1);
+      expect(result.toolCalls[0]).toEqual({
+        name: 'calculator',
+        arguments: { operation: 'add', a: 20, b: 22 },
+        result: 42,
+      });
+      expect(mockTool.action).toHaveBeenCalledWith({ operation: 'add', a: 20, b: 22 });
+    });
+
+    it('should execute tool call when JSON call is wrapped in markdown fence', async () => {
+      const fencedToolCallResponse = {
+        ...mockOllamaToolResponse,
+        message: {
+          role: 'assistant' as const,
+          content:
+            '```json\n' +
+            JSON.stringify({
+              function: {
+                name: 'calculator',
+                arguments: { operation: 'multiply', a: 6, b: 7 },
+              },
+            }) +
+            '\n```',
+        },
+      };
+
+      mockFetch
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => fencedToolCallResponse,
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          json: async () => mockOllamaFollowUpResponse,
+        });
+
+      mockTool.action.mockResolvedValueOnce(42);
+
+      const result = await adapter.executeWithTools('Calculate 6 * 7', [mockTool]);
+
+      expect(result.success).toBe(true);
+      expect(result.toolCalls).toHaveLength(1);
+      expect(result.toolCalls[0]).toEqual({
+        name: 'calculator',
+        arguments: { operation: 'multiply', a: 6, b: 7 },
+        result: 42,
+      });
+      expect(mockTool.action).toHaveBeenCalledWith({ operation: 'multiply', a: 6, b: 7 });
     });
 
     it('should handle multiple tool calls in one response', async () => {

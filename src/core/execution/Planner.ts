@@ -116,6 +116,28 @@ Use {{stepId}} in params to reference previous step results.`;
         (parsed as any).toolName
       ) {
         stepsRaw = [parsed];
+      } else if (parsed && typeof parsed === 'object') {
+        // Some models return a keyed object instead of an array:
+        // { step1: {...}, step2: {...} }
+        const entries = Object.entries(parsed as Record<string, any>);
+        const looksLikeStepMap =
+          entries.length > 0 && entries.every(([, value]) => value && typeof value === 'object');
+
+        if (looksLikeStepMap) {
+          stepsRaw = entries
+            .map(([key, value]) => {
+              // If id is missing, use object key as fallback
+              if (!value.id) {
+                return { ...value, id: key };
+              }
+              return value;
+            })
+            .filter((value: any) => value.toolName);
+        }
+
+        if (stepsRaw.length === 0) {
+          throw new Error('Unexpected plan format');
+        }
       } else {
         throw new Error('Unexpected plan format');
       }
