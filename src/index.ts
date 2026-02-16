@@ -11,7 +11,14 @@ export { Planner } from './core/execution';
 
 // Injectable Logging System
 export type { AgentLogger } from './infrastructure/logging';
-export { ConsoleLogger, SilentLogger, createDefaultLogger } from './infrastructure/logging';
+export {
+  ConsoleLogger,
+  SilentLogger,
+  createDefaultLogger,
+  LoggerUtils,
+  initializeLogger,
+  getLogger,
+} from './infrastructure/logging';
 
 // Agent Registry and Management
 export {

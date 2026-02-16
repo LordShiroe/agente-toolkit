@@ -66,4 +66,33 @@ describe('Planner plan parsing', () => {
     expect(plan.steps).toHaveLength(1);
     expect(plan.steps[0].id).toBe('s1');
   });
+
+  it('accepts a keyed object plan format', async () => {
+    const keyed = JSON.stringify({
+      step1: {
+        id: 'step1',
+        toolName: 'multiply',
+        params: { a: 2, b: 3 },
+      },
+      step2: {
+        id: 'step2',
+        toolName: 'multiply',
+        params: { a: 4, b: 5 },
+        dependsOn: ['step1'],
+      },
+    });
+
+    const planner = new Planner();
+    const adapter = new FakeAdapter(keyed);
+    const plan = await planner.createPlan('run two multiplications', tools, '', 'Planner', adapter);
+
+    expect(plan.steps).toHaveLength(2);
+    expect(plan.steps[0]).toMatchObject({ id: 'step1', toolName: 'multiply', status: 'pending' });
+    expect(plan.steps[1]).toMatchObject({
+      id: 'step2',
+      toolName: 'multiply',
+      dependsOn: ['step1'],
+      status: 'pending',
+    });
+  });
 });

@@ -21,12 +21,15 @@ interface OllamaTool {
 interface OllamaMessage {
   role: 'system' | 'user' | 'assistant' | 'tool';
   content: string;
-  tool_calls?: Array<{
-    function: {
-      name: string;
-      arguments: Record<string, any>;
-    };
-  }>;
+  tool_name?: string;
+  tool_calls?: OllamaToolCall[];
+}
+
+interface OllamaToolCall {
+  function: {
+    name: string;
+    arguments: Record<string, any>;
+  };
 }
 
 // Ollama's response format
@@ -36,12 +39,7 @@ interface OllamaResponse {
   message: {
     role: 'assistant';
     content: string;
-    tool_calls?: Array<{
-      function: {
-        name: string;
-        arguments: Record<string, any>;
-      };
-    }>;
+    tool_calls?: OllamaToolCall[];
   };
   done: boolean;
   done_reason?: string;
@@ -61,9 +59,9 @@ export class OllamaAdapter extends BaseAdapter {
   name = 'ollama';
   supportsNativeTools = true;
 
-  private baseUrl: string;
-  private model: string;
-  private headers: Record<string, string>;
+  private readonly baseUrl: string;
+  private readonly model: string;
+  private readonly headers: Record<string, string>;
 
   constructor(
     baseUrl = 'http://localhost:11434',
@@ -71,153 +69,85 @@ export class OllamaAdapter extends BaseAdapter {
     options: OllamaAdapterOptions = {}
   ) {
     super();
-    this.baseUrl = baseUrl.replace(/\/$/, ''); // Remove trailing slash
+    this.baseUrl = baseUrl.replace(/\/$/, '');
     this.model = model;
     this.headers = this.buildHeaders(options);
   }
 
   private buildHeaders(options: OllamaAdapterOptions): Record<string, string> {
-    const headers: Record<string, string> = {
-      'Content-Type': 'application/json',
-    };
+    const headers: Record<string, string> = { 'Content-Type': 'application/json' };
 
-    const authHeaderName = options.authHeaderName || 'Authorization';
     if (options.authToken) {
-      const authPrefix = options.authScheme === undefined ? 'Bearer ' : options.authScheme;
-      headers[authHeaderName] = `${authPrefix}${options.authToken}`;
+      const name = options.authHeaderName ?? 'Authorization';
+      const scheme = options.authScheme ?? 'Bearer ';
+      headers[name] = `${scheme}${options.authToken}`;
     }
 
-    return {
-      ...headers,
-      ...(options.headers || {}),
-    };
+    return { ...headers, ...options.headers };
   }
 
-  /**
-   * Text completion for general prompts
-   */
   async complete(
     prompt: string,
     options?: { json?: boolean; schema?: Record<string, any> }
   ): Promise<string> {
-    // Prefer native structured outputs via chat endpoint when requesting JSON
     if (options?.json || options?.schema) {
-      const chatBody: any = {
+      const body: Record<string, any> = {
         model: this.model,
         messages: [{ role: 'user', content: prompt }],
         stream: false,
+        format: options.schema ?? (options.json ? 'json' : undefined),
       };
-      if (options.schema) {
-        chatBody.format = options.schema; // JSON schema object
-      } else if (options.json) {
-        chatBody.format = 'json';
-      }
-      const chatResponse = await fetch(`${this.baseUrl}/api/chat`, {
-        method: 'POST',
-        headers: this.headers,
-        body: JSON.stringify(chatBody),
-      });
-      if (!chatResponse.ok) {
-        throw new Error(`Ollama API error: ${chatResponse.status} ${chatResponse.statusText}`);
-      }
-      const data = (await chatResponse.json()) as {
-        message?: { content?: string };
-      };
-      return data.message?.content || '';
+
+      const res = await this.postOllama('/api/chat', body);
+      return (res as { message?: { content?: string } }).message?.content ?? '';
     }
 
-    // Fallback to simple generate for plain text
-    const response = await fetch(`${this.baseUrl}/api/generate`, {
-      method: 'POST',
-      headers: this.headers,
-      body: JSON.stringify({
-        model: this.model,
-        prompt,
-        stream: false,
-      }),
+    const res = await this.postOllama('/api/generate', {
+      model: this.model,
+      prompt,
+      stream: false,
     });
 
-    if (!response.ok) {
-      throw new Error(`Ollama API error: ${response.status} ${response.statusText}`);
-    }
-
-    const data = (await response.json()) as { response?: string };
-    return data.response || '';
+    return (res as { response?: string }).response ?? '';
   }
 
-  /**
-   * Execute tools with a prompt - uses native Ollama function calling
-   */
   async executeWithTools(prompt: string, tools: Tool[]): Promise<ToolExecutionResult> {
     try {
-      // Convert our Tool format to Ollama's format
-      const ollamaTools: OllamaTool[] = tools.map(tool => ({
-        type: 'function',
-        function: {
-          name: tool.name,
-          description: tool.description,
-          parameters: SchemaUtils.convertToJsonSchema(tool.paramsSchema),
-        },
-      }));
-
-      const toolCalls: Array<{
-        name: string;
-        arguments: any;
-        result: any;
-      }> = [];
-
-      // Make initial request with tools
+      const ollamaTools = tools.map(tool => this.toOllamaTool(tool));
+      const toolCalls: ToolExecutionResult['toolCalls'] = [];
       const messages: OllamaMessage[] = [{ role: 'user', content: prompt }];
 
-      let response = await this.makeOllamaRequest(messages, ollamaTools);
-      let finalContent = '';
+      let response = await this.chatWithTools(messages, ollamaTools);
+      let pendingToolCalls = this.getToolCalls(response);
 
-      // Continue conversation while Ollama wants to make tool calls
-      while (response.message.tool_calls && response.message.tool_calls.length > 0) {
-        // Add assistant message with tool calls
+      while (pendingToolCalls.length) {
         messages.push({
           role: 'assistant',
           content: response.message.content,
-          tool_calls: response.message.tool_calls,
+          tool_calls: pendingToolCalls,
         });
 
-        // Process each tool call
-        for (const toolCall of response.message.tool_calls) {
-          // Find and execute the tool
-          const tool = tools.find(t => t.name === toolCall.function.name);
-          if (!tool) {
-            throw new Error(`Tool ${toolCall.function.name} not found`);
-          }
+        for (const call of pendingToolCalls) {
+          const tool = tools.find(t => t.name === call.function.name);
+          if (!tool) throw new Error(`Tool "${call.function.name}" not found`);
 
           const result = await tool.action(
-            toolCall.function.arguments as Static<typeof tool.paramsSchema>
+            call.function.arguments as Static<typeof tool.paramsSchema>
           );
 
-          toolCalls.push({
-            name: toolCall.function.name,
-            arguments: toolCall.function.arguments,
-            result,
-          });
-
-          // Add tool result to conversation
+          toolCalls.push({ name: call.function.name, arguments: call.function.arguments, result });
           messages.push({
             role: 'tool',
             content: JSON.stringify(result),
+            tool_name: call.function.name,
           });
         }
 
-        // Get follow-up response
-        response = await this.makeOllamaRequest(messages, ollamaTools);
+        response = await this.chatWithTools(messages, ollamaTools);
+        pendingToolCalls = this.getToolCalls(response);
       }
 
-      // Extract final text content (no more tool calls)
-      finalContent = response.message.content;
-
-      return {
-        content: finalContent,
-        toolCalls,
-        success: true,
-      };
+      return { content: response.message.content, toolCalls, success: true };
     } catch (error) {
       return {
         content: '',
@@ -228,29 +158,162 @@ export class OllamaAdapter extends BaseAdapter {
     }
   }
 
-  /**
-   * Make a request to Ollama's chat API
-   */
-  private async makeOllamaRequest(
+  private toOllamaTool(tool: Tool): OllamaTool {
+    return {
+      type: 'function',
+      function: {
+        name: tool.name,
+        description: tool.description,
+        parameters: SchemaUtils.convertToJsonSchema(tool.paramsSchema),
+      },
+    };
+  }
+
+  private async chatWithTools(
     messages: OllamaMessage[],
     tools: OllamaTool[]
   ): Promise<OllamaResponse> {
-    const response = await fetch(`${this.baseUrl}/api/chat`, {
+    return this.postOllama('/api/chat', {
+      model: this.model,
+      messages,
+      tools,
+      stream: false,
+    }) as Promise<OllamaResponse>;
+  }
+
+  private async postOllama(path: string, body: Record<string, any>): Promise<unknown> {
+    const response = await fetch(`${this.baseUrl}${path}`, {
       method: 'POST',
       headers: this.headers,
-      body: JSON.stringify({
-        model: this.model,
-        messages,
-        tools,
-        stream: false,
-      }),
+      body: JSON.stringify(body),
     });
 
     if (!response.ok) {
-      throw new Error(`Ollama API error: ${response.status} ${response.statusText}`);
+      await this.throwApiError(response);
     }
 
-    return (await response.json()) as OllamaResponse;
+    return response.json();
+  }
+
+  private getToolCalls(response: OllamaResponse): OllamaToolCall[] {
+    if (response.message.tool_calls?.length) {
+      return response.message.tool_calls;
+    }
+
+    return this.extractToolCallsFromContent(response.message.content);
+  }
+
+  private extractToolCallsFromContent(content: string): OllamaToolCall[] {
+    const parsed = this.tryParseToolCallJson(content);
+    if (!parsed) return [];
+
+    return this.toToolCallArray(parsed);
+  }
+
+  private tryParseToolCallJson(content: string): unknown {
+    const trimmed = content.trim();
+    if (!trimmed) return null;
+
+    const candidates = [trimmed, this.stripMarkdownCodeFence(trimmed)].filter(Boolean) as string[];
+
+    for (const candidate of candidates) {
+      try {
+        return JSON.parse(candidate);
+      } catch {
+        // keep trying candidates
+      }
+    }
+
+    return null;
+  }
+
+  private stripMarkdownCodeFence(content: string): string {
+    const match = content.match(/^```(?:json)?\s*([\s\S]*?)\s*```$/i);
+    return match?.[1]?.trim() ?? content;
+  }
+
+  private toToolCallArray(parsed: unknown): OllamaToolCall[] {
+    if (!parsed || typeof parsed !== 'object') return [];
+
+    if (Array.isArray(parsed)) {
+      return parsed
+        .map(item => this.normalizeToolCall(item))
+        .filter((call): call is OllamaToolCall => call !== null);
+    }
+
+    const obj = parsed as Record<string, unknown>;
+
+    if (Array.isArray(obj.tool_calls)) {
+      return obj.tool_calls
+        .map(item => this.normalizeToolCall(item))
+        .filter((call): call is OllamaToolCall => call !== null);
+    }
+
+    const single = this.normalizeToolCall(obj);
+    return single ? [single] : [];
+  }
+
+  private normalizeToolCall(raw: unknown): OllamaToolCall | null {
+    if (!raw || typeof raw !== 'object') return null;
+
+    const obj = raw as Record<string, unknown>;
+
+    // Shape 1: { function: { name, arguments } }
+    if (obj.function && typeof obj.function === 'object') {
+      const fn = obj.function as Record<string, unknown>;
+      const args = this.normalizeArguments(fn.arguments);
+      if (typeof fn.name === 'string' && args) {
+        return { function: { name: fn.name, arguments: args } };
+      }
+    }
+
+    // Shape 2: { name, arguments }
+    const args = this.normalizeArguments(obj.arguments);
+    if (typeof obj.name === 'string' && args) {
+      return { function: { name: obj.name, arguments: args } };
+    }
+
+    return null;
+  }
+
+  private normalizeArguments(raw: unknown): Record<string, any> | null {
+    if (raw && typeof raw === 'object' && !Array.isArray(raw)) {
+      return raw as Record<string, any>;
+    }
+
+    if (typeof raw === 'string') {
+      try {
+        const parsed = JSON.parse(raw);
+        if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+          return parsed as Record<string, any>;
+        }
+      } catch {
+        return null;
+      }
+    }
+
+    return null;
+  }
+
+  private async throwApiError(response: Response): Promise<never> {
+    let details = '';
+    try {
+      const raw = await response.text();
+      if (raw.trim()) {
+        try {
+          const parsed = JSON.parse(raw) as { error?: string; message?: string };
+          details = parsed.error ?? parsed.message ?? raw.trim();
+        } catch {
+          details = raw.trim();
+        }
+      }
+    } catch {
+      /* ignore body parsing errors */
+    }
+
+    throw new Error(
+      `Ollama API error: ${response.status} ${response.statusText}${details ? `: ${details}` : ''}`
+    );
   }
 }
 
